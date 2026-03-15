@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>提示词管理站</title>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 80px; }
+        
+        /* 顶部标题 */
+        header { background-color: var(--card-bg); padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        h1 { font-size: 1.2rem; color: var(--primary-color); }
+
+        /* 内容区域 */
+        .container { padding: 16px; display: none; }
+        .container.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 卡片样式 */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px; }
+        .card-header .card-title { margin: 0; border: none; padding: 0; }
+        .group-actions { display: flex; gap: 8px; }
+        
+        /* 列表与按钮 */
+        .prompt-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #E5E7EB; }
+        .prompt-item:last-child { margin-bottom: 0; }
+        .prompt-main { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .prompt-name { font-size: 0.95rem; color: var(--text-main); flex: 1; }
+        .prompt-actions { display: flex; gap: 8px; }
+        .copy-btn { 
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; font-weight: 500;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .copy-btn:active { background-color: #4338CA; transform: scale(0.98); }
+        .secondary-btn {
+            background: #EEF2FF;
+            color: #3730A3;
+        }
+        .secondary-btn:active {
+            background: #E0E7FF;
+        }
+        .danger-btn {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+        .danger-btn:active {
+            background: #FECACA;
+        }
+        .preview-box {
+            margin-top: 10px;
+            background: #F8FAFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.88rem;
+            color: #374151;
+            line-height: 1.5;
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .preview-box.active {
+            display: block;
+        }
+        .inline-item-form {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+            background: #F8FAFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .inline-item-form input,
+        .inline-item-form textarea {
+            width: 100%;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            background: #FFF;
+        }
+        .inline-item-form textarea {
+            min-height: 88px;
+            resize: vertical;
+        }
+
+        /* 在线编辑区 */
+        .editor-title {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .editor-form {
+            display: grid;
+            gap: 10px;
+        }
+        .editor-form select,
+        .editor-form input,
+        .editor-form textarea {
+            width: 100%;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.92rem;
+            background: #FFF;
+            color: var(--text-main);
+        }
+        .editor-form textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .hint-text {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.4;
+        }
+        .inline-add {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px dashed #E5E7EB;
+        }
+        .tag-filter-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .tag-chip {
+            border: 1px solid #D1D5DB;
+            background: #FFFFFF;
+            color: #374151;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tag-chip:active {
+            transform: scale(0.98);
+        }
+        .tag-chip.active {
+            border-color: var(--primary-color);
+            background: #EEF2FF;
+            color: #3730A3;
+            font-weight: 600;
+        }
+        .tag-empty {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .card-tag {
+            font-size: 0.76rem;
+            color: #374151;
+            background: #F3F4F6;
+            border-radius: 999px;
+            padding: 4px 10px;
+        }
+        .search-filter-wrap {
+            display: grid;
+            gap: 8px;
+        }
+        .search-row {
+            display: flex;
+            gap: 8px;
+        }
+        .search-input {
+            flex: 1;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            background: #FFF;
+        }
+
+        /* 底部导航栏 */
+        nav { 
+            position: fixed; bottom: 0; width: 100%; background: var(--card-bg); 
+            display: flex; justify-content: space-around; padding: 12px 0; 
+            box-shadow: 0 -1px 3px rgba(0,0,0,0.1); padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        }
+        .nav-item { 
+            display: flex; flex-direction: column; align-items: center; 
+            color: var(--text-muted); font-size: 0.8rem; cursor: pointer; padding: 4px 12px;
+        }
+        .nav-item.active { color: var(--primary-color); font-weight: bold; }
+        .nav-icon { font-size: 1.5rem; margin-bottom: 4px; }
+
+        /* 提示弹窗 */
+        #toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+            border-radius: 20px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>提示词管理小站</h1>
+    </header>
+
+    <div id="tab-chars" class="container active">
+        <div class="card">
+            <div class="editor-title">新增角色分组</div>
+            <div class="inline-add">
+                <input id="char-group-title-input" type="text" placeholder="输入角色分组名称，例如：🧝 精灵射手" />
+                <button id="char-group-add-btn" class="copy-btn" type="button">新增角色</button>
+            </div>
+            <div class="hint-text">提示：人物提示词请在对应角色卡片中直接新增或编辑。</div>
+        </div>
+
+        <div class="card">
+            <div class="editor-title">标签筛选</div>
+            <div id="char-tag-filters" class="tag-filter-wrap"></div>
+            <div class="hint-text" style="margin-top: 8px;">提示：先在角色卡片中编辑标签，再使用这里筛选角色。</div>
+        </div>
+
+        <div class="card">
+            <div class="editor-title">名称搜索</div>
+            <div class="search-filter-wrap">
+                <div class="search-row">
+                    <input id="char-name-search" class="search-input" type="text" placeholder="输入关键词，匹配角色名称" />
+                    <button id="char-name-search-clear" class="copy-btn secondary-btn" type="button">清空</button>
+                </div>
+                <div class="hint-text">支持中文和英文关键词，例如：缪尔、goldenglow、Amiya。</div>
+            </div>
+        </div>
+
+        <div id="list-chars"></div>
+    </div>
+
+    <div id="tab-actions" class="container">
+        <div class="card">
+            <div class="hint-text">提示：动作提示词请在对应分组卡片中直接新增或编辑。</div>
+        </div>
+        <div id="list-actions"></div>
+    </div>
+
+    <div id="tab-env" class="container">
+        <div class="card">
+            <div class="hint-text">提示：环境提示词请在对应分组卡片中直接新增或编辑。</div>
+        </div>
+        <div id="list-env"></div>
+    </div>
+
+    <nav>
+        <div class="nav-item active" onclick="switchTab('chars', this)">
+            <div class="nav-icon">👤</div>
+            <span>人物</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('actions', this)">
+            <div class="nav-icon">🏃</div>
+            <span>动作</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('env', this)">
+            <div class="nav-icon">✨</div>
+            <span>环境质量</span>
+        </div>
+    </nav>
+
+    <div id="toast">已复制到剪贴板</div>
+
+    <script>
+        const defaultPromptData = {
+            chars: [
+                {
+                    id: 'cyber-girl',
+                    title: '👨‍🎤 赛博朋克女孩 (Cyber Girl)',
+                    items: [
+                        { id: 'cg-1', name: '标准战斗服', prompt: '1girl, solo, cyberpunk style, neon lights, black combat suit, glowing visor, high detail, masterpiece' },
+                        { id: 'cg-2', name: '休闲夹克装', prompt: '1girl, solo, cyberpunk style, daylight, wearing oversized yellow jacket, crop top, streetwear, high resolution' }
+                    ]
+                },
+                {
+                    id: 'fantasy-mage',
+                    title: '🧙‍♂️ 奇幻法师 (Fantasy Mage)',
+                    items: [
+                        { id: 'fm-1', name: '星空长袍', prompt: '1boy, male mage, long wizard robe with starry patterns, holding glowing staff, casting spell, fantasy illustration' },
+                        { id: 'fm-2', name: '旅行斗篷', prompt: '1boy, male traveler, ragged cloak, holding old book, walking in forest, dynamic lighting, 8k' }
+                    ]
+                }
+            ],
+            actions: [
+                {
+                    id: 'action-basic',
+                    title: '🏃‍♂️ 动态与姿势',
+                    items: [
+                        { id: 'ab-1', name: '拔剑姿势', prompt: 'dynamic pose, drawing sword, leaning forward, looking at viewer, intense action' },
+                        { id: 'ab-2', name: '漂浮半空', prompt: 'floating in the air, weightless, zero gravity, hair blowing in the wind, magical pose' },
+                        { id: 'ab-3', name: '回眸一笑', prompt: 'looking back over shoulder, gentle smile, eye contact, cinematic angle' }
+                    ]
+                }
+            ],
+            env: [
+                {
+                    id: 'env-light',
+                    title: '🌄 环境与光影',
+                    items: [
+                        { id: 'el-1', name: '废弃城市落日', prompt: 'ruined city, overgrown with plants, sunset, golden hour, god rays, atmospheric lighting' },
+                        { id: 'el-2', name: '魔法森林起雾', prompt: 'magical forest, glowing mushrooms, dense fog, mystical atmosphere, fireflies' }
+                    ]
+                },
+                {
+                    id: 'env-quality',
+                    title: '💎 画质提升词',
+                    items: [
+                        { id: 'eq-1', name: '通用高画质', prompt: 'masterpiece, best quality, ultra-detailed, 8k resolution, finely detailed, photorealistic' },
+                        { id: 'eq-2', name: '二次元质感', prompt: 'anime visual novel style, studio ghibli, vivid colors, clear lines, high contrast' }
+                    ]
+                }
+            ]
+        };
+
+        const TAB_KEYS = ['chars', 'actions', 'env'];
+
+        let promptData = JSON.parse(JSON.stringify(defaultPromptData));
+        let activeTab = 'chars';
+        let editState = null;
+        let addState = null;
+        let activeCharTag = '__all__';
+        let activeCharKeyword = '';
+
+        const charGroupTitleInput = document.getElementById('char-group-title-input');
+        const charGroupAddBtn = document.getElementById('char-group-add-btn');
+        const charTagFilters = document.getElementById('char-tag-filters');
+        const charNameSearch = document.getElementById('char-name-search');
+        const charNameSearchClear = document.getElementById('char-name-search-clear');
+
+        init();
+
+        async function init() {
+            promptData = await loadPromptData();
+            renderAllTabs();
+            bindListEvents();
+            bindGroupEvents();
+            bindCharSearchEvents();
+        }
+
+        async function loadPromptData() {
+            try {
+                const response = await fetch('/api/prompts');
+                if (!response.ok) {
+                    throw new Error('数据读取失败: ' + response.status);
+                }
+                const data = await response.json();
+                if (!data || typeof data !== 'object') {
+                    throw new Error('数据格式无效');
+                }
+                return normalizePromptData(data);
+            } catch (e) {
+                console.warn('读取服务端数据失败，使用默认数据', e);
+                showToast('服务端读取失败，已使用默认数据');
+            }
+            return normalizePromptData(JSON.parse(JSON.stringify(defaultPromptData)));
+        }
+
+        async function savePromptData() {
+            try {
+                const response = await fetch('/api/prompts', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(promptData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('数据保存失败: ' + response.status);
+                }
+
+                return true;
+            } catch (e) {
+                console.error('保存失败', e);
+                showToast('保存失败，请检查服务器状态');
+                return false;
+            }
+        }
+
+        function newId() {
+            return 'id-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+        }
+
+        function renderAllTabs() {
+            renderCharTagFilters();
+            renderTab('chars');
+            renderTab('actions');
+            renderTab('env');
+        }
+
+        function renderTab(tabId) {
+            const listNode = document.getElementById('list-' + tabId);
+            const groups = promptData[tabId] || [];
+            const visibleGroups = tabId === 'chars' ? getVisibleCharGroups(groups) : groups;
+
+            listNode.innerHTML = visibleGroups.map(group => {
+                const itemsHtml = group.items.map(item => {
+                    const isEditing = !!editState && editState.tabId === tabId && editState.groupId === group.id && editState.itemId === item.id;
+                    const previewHtml = isEditing
+                        ? '<div class="preview-box active"><div class="inline-item-form" data-inline-form="edit"><input class="inline-item-name" type="text" value="' + escapeAttr(item.name) + '" placeholder="条目名称" /><textarea class="inline-item-prompt" placeholder="提示词内容">' + escapeHtml(item.prompt) + '</textarea><div class="form-actions"><button class="copy-btn" data-action="edit-inline-save">保存</button><button class="copy-btn secondary-btn" data-action="edit-inline-cancel">取消</button></div></div></div>'
+                        : '<div class="preview-box">' + escapeHtml(item.prompt) + '</div>';
+
+                    return '\n                        <div class="prompt-item" data-item-id="' + item.id + '" data-group-id="' + group.id + '" data-tab-id="' + tabId + '">\n                            <div class="prompt-main">\n                                <span class="prompt-name">' + escapeHtml(item.name) + '</span>\n                                <div class="prompt-actions">\n                                    <button class="copy-btn" data-action="copy" data-prompt="' + escapeAttr(item.prompt) + '">复制</button>\n                                    <button class="copy-btn secondary-btn" data-action="edit">编辑</button>\n                                    <button class="copy-btn secondary-btn" data-action="preview">预览</button>\n                                    <button class="copy-btn danger-btn" data-action="delete" data-item-name="' + escapeAttr(item.name) + '">删除</button>\n                                </div>\n                            </div>\n                            ' + previewHtml + '\n                        </div>\n                    ';
+                }).join('');
+
+                const content = itemsHtml || '<div class="hint-text">当前分组还没有提示词，使用上方表单新增。</div>';
+                const commonAddBtn = '<button class="copy-btn" data-action="add-item-start" data-tab-id="' + tabId + '" data-group-id="' + group.id + '">新增提示词</button>';
+                const groupManageBtns = tabId === 'chars'
+                    ? '<button class="copy-btn secondary-btn" data-action="edit-tags" data-group-id="' + group.id + '">编辑标签</button><button class="copy-btn secondary-btn" data-action="rename-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '">编辑角色名</button><button class="copy-btn danger-btn" data-action="delete-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '">删除角色</button>'
+                    : '';
+                const groupActionHtml = '<div class="group-actions">' + commonAddBtn + groupManageBtns + '</div>';
+                const addFormHtml = (addState && addState.tabId === tabId && addState.groupId === group.id)
+                    ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"><input class="inline-item-name" type="text" placeholder="输入条目名称" /><textarea class="inline-item-prompt" placeholder="输入完整提示词"></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save">保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
+                    : '';
+                const tagsHtml = tabId === 'chars' ? renderCardTags(group.tags || []) : '';
+
+                return '\n                    <div class="card">\n                        <div class="card-header">\n                            <div class="card-title">' + escapeHtml(group.title) + '</div>\n                            ' + groupActionHtml + '\n                        </div>\n                        ' + tagsHtml + '\n                        ' + content + '\n                        ' + addFormHtml + '\n                    </div>\n                ';
+            }).join('');
+
+            if (!groups.length) {
+                listNode.innerHTML = '<div class="card"><div class="hint-text">当前菜单暂无分组，请先新增分组。</div></div>';
+                return;
+            }
+
+            if (tabId === 'chars' && !visibleGroups.length) {
+                listNode.innerHTML = '<div class="card"><div class="hint-text">当前筛选条件下没有角色，试试清空关键词或切换标签。</div></div>';
+            }
+        }
+
+        function bindGroupEvents() {
+            charGroupAddBtn.addEventListener('click', async function () {
+                const title = charGroupTitleInput.value.trim();
+                if (!title) {
+                    showToast('请输入角色分组名称');
+                    return;
+                }
+
+                const existed = (promptData.chars || []).some(group => group.title === title);
+                if (existed) {
+                    showToast('该角色分组已存在');
+                    return;
+                }
+
+                const backup = deepClone(promptData);
+                promptData.chars.unshift({
+                    id: newId(),
+                    title: title,
+                    tags: [],
+                    items: []
+                });
+
+                const saved = await savePromptData();
+                if (!saved) {
+                    promptData = backup;
+                    return;
+                }
+
+                charGroupTitleInput.value = '';
+                renderTab('chars');
+                showToast('已新增角色分组');
+            });
+        }
+
+        function bindListEvents() {
+            ['list-chars', 'list-actions', 'list-env'].forEach(function (id) {
+                const list = document.getElementById(id);
+                list.addEventListener('click', async function (event) {
+                    const btn = event.target.closest('button');
+                    if (!btn) {
+                        return;
+                    }
+
+                    const action = btn.dataset.action;
+
+                    if (action === 'rename-group') {
+                        await renameCharGroup(btn.dataset.groupId, btn.dataset.groupTitle || '');
+                        return;
+                    }
+
+                    if (action === 'edit-tags') {
+                        await editCharGroupTags(btn.dataset.groupId);
+                        return;
+                    }
+
+                    if (action === 'delete-group') {
+                        await deleteCharGroup(btn.dataset.groupId, btn.dataset.groupTitle || '');
+                        return;
+                    }
+
+                    if (action === 'add-item-start') {
+                        addState = { tabId: btn.dataset.tabId, groupId: btn.dataset.groupId };
+                        editState = null;
+                        renderTab(btn.dataset.tabId);
+                        return;
+                    }
+
+                    const itemNode = btn.closest('.prompt-item');
+                    if (!itemNode) {
+                        if (action === 'add-item-cancel') {
+                            const formNode = btn.closest('[data-inline-form="add"]');
+                            const tabId = formNode ? formNode.dataset.tabId : activeTab;
+                            addState = null;
+                            renderTab(tabId);
+                            return;
+                        }
+
+                        if (action === 'add-item-save') {
+                            const formNode = btn.closest('[data-inline-form="add"]');
+                            if (!formNode) {
+                                return;
+                            }
+                            await saveInlineAddedItem(formNode);
+                            return;
+                        }
+
+                        return;
+                    }
+
+                    if (action === 'copy') {
+                        copyPrompt(btn.dataset.prompt || '');
+                        return;
+                    }
+
+                    if (action === 'preview') {
+                        if (editState && editState.tabId === itemNode.dataset.tabId && editState.groupId === itemNode.dataset.groupId && editState.itemId === itemNode.dataset.itemId) {
+                            return;
+                        }
+                        const box = itemNode.querySelector('.preview-box');
+                        box.classList.toggle('active');
+                        return;
+                    }
+
+                    if (action === 'edit') {
+                        const tabId = itemNode.dataset.tabId;
+                        const groupId = itemNode.dataset.groupId;
+                        const itemId = itemNode.dataset.itemId;
+                        startEdit(tabId, groupId, itemId);
+                        return;
+                    }
+
+                    if (action === 'edit-inline-cancel') {
+                        editState = null;
+                        renderTab(itemNode.dataset.tabId);
+                        return;
+                    }
+
+                    if (action === 'edit-inline-save') {
+                        const formNode = btn.closest('[data-inline-form="edit"]');
+                        if (!formNode) {
+                            return;
+                        }
+                        await saveInlineEditedItem(itemNode, formNode);
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        const tabId = itemNode.dataset.tabId;
+                        const groupId = itemNode.dataset.groupId;
+                        const itemId = itemNode.dataset.itemId;
+                        const itemName = btn.dataset.itemName || '该条目';
+                        deleteItem(tabId, groupId, itemId, itemName);
+                    }
+                });
+            });
+        }
+
+        function bindTagFilterEvents() {
+            if (!charTagFilters) {
+                return;
+            }
+
+            charTagFilters.addEventListener('click', function (event) {
+                const btn = event.target.closest('button[data-action="filter-tag"]');
+                if (!btn) {
+                    return;
+                }
+
+                activeCharTag = btn.dataset.tag || '__all__';
+                renderCharTagFilters();
+                renderTab('chars');
+            });
+        }
+
+        function bindCharSearchEvents() {
+            if (!charNameSearch || !charNameSearchClear) {
+                return;
+            }
+
+            charNameSearch.addEventListener('input', function () {
+                activeCharKeyword = charNameSearch.value.trim().toLowerCase();
+                renderTab('chars');
+            });
+
+            charNameSearchClear.addEventListener('click', function () {
+                charNameSearch.value = '';
+                activeCharKeyword = '';
+                renderTab('chars');
+            });
+        }
+
+        function renderCharTagFilters() {
+            if (!charTagFilters) {
+                return;
+            }
+
+            const tags = collectCharTags();
+            const allBtn = '<button class="tag-chip' + (activeCharTag === '__all__' ? ' active' : '') + '" data-action="filter-tag" data-tag="__all__">全部</button>';
+            const tagBtns = tags.map(function (tag) {
+                const isActive = tag === activeCharTag;
+                return '<button class="tag-chip' + (isActive ? ' active' : '') + '" data-action="filter-tag" data-tag="' + escapeAttr(tag) + '">' + escapeHtml(tag) + '</button>';
+            }).join('');
+
+            charTagFilters.innerHTML = allBtn + tagBtns;
+            if (!tags.length) {
+                charTagFilters.innerHTML = allBtn + '<span class="tag-empty">暂无标签</span>';
+            }
+        }
+
+        function collectCharTags() {
+            const groups = promptData.chars || [];
+            const tagSet = new Set();
+            groups.forEach(function (group) {
+                (group.tags || []).forEach(function (tag) {
+                    if (tag) {
+                        tagSet.add(tag);
+                    }
+                });
+            });
+            return Array.from(tagSet);
+        }
+
+        function getVisibleCharGroups(groups) {
+            return groups.filter(function (group) {
+                const passTag = activeCharTag === '__all__' || (group.tags || []).indexOf(activeCharTag) > -1;
+                const passKeyword = !activeCharKeyword || String(group.title || '').toLowerCase().indexOf(activeCharKeyword) > -1;
+                return passTag && passKeyword;
+            });
+        }
+
+        function renderCardTags(tags) {
+            if (!tags.length) {
+                return '<div class="hint-text" style="margin-bottom: 12px;">标签：未设置</div>';
+            }
+
+            const chips = tags.map(function (tag) {
+                return '<span class="card-tag">' + escapeHtml(tag) + '</span>';
+            }).join('');
+            return '<div class="card-tags">' + chips + '</div>';
+        }
+
+        async function editCharGroupTags(groupId) {
+            const groups = promptData.chars || [];
+            const targetGroup = groups.find(function (group) {
+                return group.id === groupId;
+            });
+            if (!targetGroup) {
+                showToast('角色分组不存在');
+                return;
+            }
+
+            const oldTagsText = (targetGroup.tags || []).join(', ');
+            const nextTagsRaw = window.prompt('请输入标签，多个标签用英文逗号分隔：', oldTagsText);
+            if (nextTagsRaw === null) {
+                return;
+            }
+
+            const nextTags = parseTags(nextTagsRaw);
+            const backup = deepClone(promptData);
+            targetGroup.tags = nextTags;
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            const availableTags = collectCharTags();
+            if (activeCharTag !== '__all__' && availableTags.indexOf(activeCharTag) === -1) {
+                activeCharTag = '__all__';
+            }
+
+            renderCharTagFilters();
+            renderTab('chars');
+            showToast('角色标签已更新');
+        }
+
+        function parseTags(text) {
+            const parts = String(text || '').split(',').map(function (item) {
+                return item.trim();
+            }).filter(function (item) {
+                return !!item;
+            });
+
+            const uniq = [];
+            const seen = new Set();
+            parts.forEach(function (tag) {
+                if (!seen.has(tag)) {
+                    seen.add(tag);
+                    uniq.push(tag);
+                }
+            });
+            return uniq;
+        }
+
+        function normalizePromptData(data) {
+            const normalized = deepClone(data || {});
+            TAB_KEYS.forEach(function (tabKey) {
+                if (!Array.isArray(normalized[tabKey])) {
+                    normalized[tabKey] = [];
+                }
+            });
+
+            normalized.chars = normalized.chars.map(function (group) {
+                const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名角色', items: [] };
+                if (!Array.isArray(nextGroup.items)) {
+                    nextGroup.items = [];
+                }
+                if (!Array.isArray(nextGroup.tags)) {
+                    nextGroup.tags = [];
+                }
+                return nextGroup;
+            });
+
+            return normalized;
+        }
+
+        async function renameCharGroup(groupId, oldTitle) {
+            const groups = promptData.chars || [];
+            const targetGroup = groups.find(group => group.id === groupId);
+            if (!targetGroup) {
+                showToast('角色分组不存在');
+                return;
+            }
+
+            const nextTitleRaw = window.prompt('请输入新的角色名称：', oldTitle || targetGroup.title);
+            if (nextTitleRaw === null) {
+                return;
+            }
+
+            const nextTitle = nextTitleRaw.trim();
+            if (!nextTitle) {
+                showToast('角色名称不能为空');
+                return;
+            }
+
+            const duplicated = groups.some(group => group.id !== groupId && group.title === nextTitle);
+            if (duplicated) {
+                showToast('角色名称已存在');
+                return;
+            }
+
+            const backup = deepClone(promptData);
+            targetGroup.title = nextTitle;
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            renderTab('chars');
+            showToast('角色名称已更新');
+        }
+
+        async function deleteCharGroup(groupId, groupTitle) {
+            const groups = promptData.chars || [];
+            const targetGroup = groups.find(group => group.id === groupId);
+            if (!targetGroup) {
+                showToast('角色分组不存在');
+                return;
+            }
+
+            const hasItems = (targetGroup.items || []).length > 0;
+            const confirmText = hasItems
+                ? '确认删除角色“' + (groupTitle || targetGroup.title) + '”吗？该角色下的提示词也会一并删除。'
+                : '确认删除角色“' + (groupTitle || targetGroup.title) + '”吗？';
+
+            if (!window.confirm(confirmText)) {
+                return;
+            }
+
+            const backup = deepClone(promptData);
+            promptData.chars = groups.filter(group => group.id !== groupId);
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            if (editState && editState.tabId === 'chars' && editState.groupId === groupId) {
+                editState = null;
+            }
+            if (addState && addState.tabId === 'chars' && addState.groupId === groupId) {
+                addState = null;
+            }
+
+            renderTab('chars');
+            showToast('角色已删除');
+        }
+
+        async function deleteItem(tabId, groupId, itemId, itemName) {
+            if (!window.confirm('确认删除条目“' + itemName + '”吗？')) {
+                return;
+            }
+
+            const groups = promptData[tabId] || [];
+            const targetGroup = groups.find(group => group.id === groupId);
+            if (!targetGroup) {
+                showToast('未找到所属分组');
+                return;
+            }
+
+            const backup = deepClone(promptData);
+            const beforeCount = targetGroup.items.length;
+            targetGroup.items = targetGroup.items.filter(item => item.id !== itemId);
+            if (beforeCount === targetGroup.items.length) {
+                showToast('条目不存在，无法删除');
+                return;
+            }
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            if (editState && editState.itemId === itemId && editState.groupId === groupId && editState.tabId === tabId) {
+                editState = null;
+            }
+
+            renderTab(tabId);
+            showToast('条目已删除');
+        }
+
+        async function saveInlineEditedItem(itemNode, formNode) {
+            const tabId = itemNode.dataset.tabId;
+            const groupId = itemNode.dataset.groupId;
+            const itemId = itemNode.dataset.itemId;
+            const nameInput = formNode.querySelector('.inline-item-name');
+            const promptInput = formNode.querySelector('.inline-item-prompt');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const prompt = promptInput ? promptInput.value.trim() : '';
+
+            if (!name || !prompt) {
+                showToast('请填写完整信息');
+                return;
+            }
+
+            const groups = promptData[tabId] || [];
+            const targetGroup = groups.find(group => group.id === groupId);
+            const targetItem = targetGroup ? targetGroup.items.find(item => item.id === itemId) : null;
+            if (!targetGroup || !targetItem) {
+                showToast('条目不存在，可能已被删除');
+                editState = null;
+                renderTab(tabId);
+                return;
+            }
+
+            const backup = deepClone(promptData);
+            targetItem.name = name;
+            targetItem.prompt = prompt;
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            editState = null;
+            renderTab(tabId);
+            showToast('提示词已更新');
+        }
+
+        async function saveInlineAddedItem(formNode) {
+            const tabId = formNode.dataset.tabId;
+            const groupId = formNode.dataset.groupId;
+            const nameInput = formNode.querySelector('.inline-item-name');
+            const promptInput = formNode.querySelector('.inline-item-prompt');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const prompt = promptInput ? promptInput.value.trim() : '';
+
+            if (!tabId || !groupId || !name || !prompt) {
+                showToast('请填写完整信息');
+                return;
+            }
+
+            const groups = promptData[tabId] || [];
+            const targetGroup = groups.find(group => group.id === groupId);
+            if (!targetGroup) {
+                showToast('未找到分组');
+                return;
+            }
+
+            const backup = deepClone(promptData);
+            targetGroup.items.unshift({
+                id: newId(),
+                name: name,
+                prompt: prompt
+            });
+
+            const saved = await savePromptData();
+            if (!saved) {
+                promptData = backup;
+                return;
+            }
+
+            addState = null;
+            renderTab(tabId);
+            showToast('已新增提示词条目');
+        }
+
+        function startEdit(tabId, groupId, itemId) {
+            if (tabId !== activeTab) {
+                activeTab = tabId;
+            }
+
+            const group = (promptData[tabId] || []).find(g => g.id === groupId);
+            const item = group ? group.items.find(i => i.id === itemId) : null;
+
+            if (!group || !item) {
+                showToast('找不到要编辑的条目');
+                return;
+            }
+
+            if (tabId !== activeTab) {
+                switchToTab(tabId);
+            }
+            editState = { tabId: tabId, groupId: groupId, itemId: itemId };
+            addState = null;
+            renderTab(tabId);
+        }
+
+        function deepClone(data) {
+            return JSON.parse(JSON.stringify(data));
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(text) {
+            return escapeHtml(text).replace(/\n/g, '&#10;');
+        }
+
+        // 切换标签页逻辑
+        function switchTab(tabId, element) {
+            activeTab = tabId;
+            switchToTab(tabId, element);
+            editState = null;
+            addState = null;
+            if (tabId === 'chars') {
+                renderCharTagFilters();
+            }
+        }
+
+        function switchToTab(tabId, element) {
+            document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(function (item) {
+                    const tabText = item.textContent || '';
+                    if ((tabId === 'chars' && tabText.indexOf('人物') > -1) ||
+                        (tabId === 'actions' && tabText.indexOf('动作') > -1) ||
+                        (tabId === 'env' && tabText.indexOf('环境质量') > -1)) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+
+            window.scrollTo(0, 0);
+        }
+
+        // 复制到剪贴板逻辑
+        function copyPrompt(text) {
+            // 现代浏览器 Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast();
+                }).catch(err => {
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        // 兼容旧版浏览器/HTTP环境的复制方案
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            // 避免滚动
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast();
+            } catch (err) {
+                alert('复制失败，请手动复制');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 显示 Toast 提示
+        let toastTimeout;
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            if (message) {
+                toast.textContent = message;
+            } else {
+                toast.textContent = '已复制到剪贴板';
+            }
+            toast.style.opacity = '1';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
+        bindTagFilterEvents();
+    </script>
+</body>
+</html>

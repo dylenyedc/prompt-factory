@@ -1,0 +1,9 @@
+{
+  "name": "prompt-factory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prompt factory with server-side JSON storage",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
