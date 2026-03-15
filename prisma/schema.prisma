@@ -1,0 +1,49 @@
+// Prisma schema for SD-OutfitHub MVP
+// Default: SQLite for local dev. Set DATABASE_URL=postgresql://... for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  groups       Group[]
+  items        Item[]
+}
+
+// section: chars | actions | env | outfit
+// tagsText: JSON array of tag strings (used by chars section only)
+model Group {
+  id        String   @id @default(cuid())
+  userId    String
+  section   String
+  title     String
+  tagsText  String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     Item[]
+}
+
+// categoryKey: for outfit items, one of: tops|bottoms|shoes|headwear|accessories|weapons|others
+// null for chars/actions/env items
+model Item {
+  id          String   @id @default(cuid())
+  userId      String
+  groupId     String
+  name        String
+  prompt      String
+  categoryKey String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}

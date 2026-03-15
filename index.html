@@ -15,8 +15,49 @@
         <button class="sidebar-nav-item active" data-page="prompts" type="button">提示词管理</button>
         <button class="sidebar-nav-item" data-page="community" type="button">社区（开发中）</button>
         <button class="sidebar-nav-item" data-page="profile" type="button">个人信息（开发中）</button>
+        <div class="sidebar-auth-section">
+            <div id="auth-user-info" class="sidebar-user-email"></div>
+            <button id="auth-logout-btn" class="sidebar-nav-item" type="button" style="display:none;">退出登录</button>
+        </div>
     </aside>
     <div id="sidebar-mask" class="sidebar-mask"></div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="auth-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="登录 / 注册">
+        <div class="auth-modal-box">
+            <h2 class="auth-modal-title">SD-OutfitHub</h2>
+            <div class="auth-tabs">
+                <button id="auth-tab-login" class="auth-tab active" type="button">登录</button>
+                <button id="auth-tab-register" class="auth-tab" type="button">注册</button>
+            </div>
+
+            <div id="auth-panel-login">
+                <div class="auth-field">
+                    <label for="auth-login-email">邮箱</label>
+                    <input id="auth-login-email" type="email" placeholder="your@email.com" autocomplete="email" />
+                </div>
+                <div class="auth-field">
+                    <label for="auth-login-password">密码</label>
+                    <input id="auth-login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+                </div>
+                <p id="auth-login-error" class="auth-error"></p>
+                <button id="auth-login-btn" class="copy-btn auth-submit-btn" type="button">登录</button>
+            </div>
+
+            <div id="auth-panel-register" style="display:none;">
+                <div class="auth-field">
+                    <label for="auth-register-email">邮箱</label>
+                    <input id="auth-register-email" type="email" placeholder="your@email.com" autocomplete="email" />
+                </div>
+                <div class="auth-field">
+                    <label for="auth-register-password">密码（至少 8 位）</label>
+                    <input id="auth-register-password" type="password" placeholder="••••••••" autocomplete="new-password" />
+                </div>
+                <p id="auth-register-error" class="auth-error"></p>
+                <button id="auth-register-btn" class="copy-btn auth-submit-btn" type="button">注册</button>
+            </div>
+        </div>
+    </div>
 
     <div id="app-page-prompts" class="app-page active">
 
@@ -133,6 +174,7 @@
 
     <div id="toast">已复制到剪贴板</div>
 
+    <script src="/scripts/auth.js"></script>
     <script src="/scripts/core/state.js"></script>
     <script src="/scripts/core/utils.js"></script>
     <script src="/scripts/core/data.js"></script>

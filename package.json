@@ -4,6 +4,22 @@
   "private": true,
   "description": "SD-OutfitHub - 本地 Stable Diffusion 服装提示词管理与检索工具",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "test": "node --test tests/auth.test.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2"
   }
 }

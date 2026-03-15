@@ -1,6 +1,10 @@
 async function loadPromptData() {
     try {
         const response = await fetch('/api/prompts');
+        if (response.status === 401) {
+            showAuthModal();
+            return normalizePromptData({});
+        }
         if (!response.ok) {
             throw new Error('数据读取失败: ' + response.status);
         }
