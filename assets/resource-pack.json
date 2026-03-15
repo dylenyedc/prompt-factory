@@ -1,0 +1,9 @@
+{
+  "name": "sd-outfithub-default-icons",
+  "version": "1.0.0",
+  "description": "默认图标资源包",
+  "icons": {
+    "app": "./icons/app-icon.svg",
+    "favicon": "./icons/favicon.svg"
+  }
+}

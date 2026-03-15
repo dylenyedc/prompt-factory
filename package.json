@@ -1,8 +1,8 @@
 {
-  "name": "prompt-factory",
+  "name": "sd-outfithub",
   "version": "1.0.0",
   "private": true,
-  "description": "Prompt factory with server-side JSON storage",
+  "description": "SD-OutfitHub - 本地 Stable Diffusion 服装提示词管理与检索工具",
   "scripts": {
     "start": "node server.js"
   }

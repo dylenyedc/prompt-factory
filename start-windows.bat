@@ -3,7 +3,7 @@ setlocal
 
 cd /d "%~dp0"
 
-echo [Prompt Factory] Checking Node.js...
+echo [SD-OutfitHub] Checking Node.js...
 where node >nul 2>nul
 if errorlevel 1 (
   echo [Error] Node.js is not installed or not in PATH.
@@ -18,7 +18,7 @@ if not exist "server.js" (
   exit /b 1
 )
 
-echo [Prompt Factory] Starting server on http://localhost:3000 ...
+echo [SD-OutfitHub] Starting server on http://localhost:3000 ...
 echo Press Ctrl+C to stop.
 echo.
 

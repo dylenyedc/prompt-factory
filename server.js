@@ -260,7 +260,10 @@ function handleStatic(req, res) {
     '.html': 'text/html; charset=utf-8',
     '.js': 'application/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
-    '.json': 'application/json; charset=utf-8'
+    '.json': 'application/json; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.ico': 'image/x-icon'
   };
 
   const contentType = mimeMap[ext] || 'text/plain; charset=utf-8';
@@ -294,5 +297,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Prompt factory server is running at http://localhost:${PORT}`);
+  console.log(`SD-OutfitHub server is running at http://localhost:${PORT}`);
 });

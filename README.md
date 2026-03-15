@@ -1,9 +1,11 @@
-# prompt-factory
-一个极小的本地化实验项目，用于快速管理和展示 prompt 数据的个人工具。
+# SD-OutfitHub
+一个轻量的本地化项目，用于管理和检索 Stable Diffusion 服装相关提示词数据。
 
 主要文件
 - `index.html` — 前端界面
 - `server.js` — 提供静态页面的简易本地服务器
+- `assets/resource-pack.json` — 图标资源包索引
+- `assets/icons/` — 默认应用图标与 favicon
 - `prompt-data.json` — 本地提示数据（已加入 `.gitignore`，不随仓库提交）
 - `package.json` — 依赖与启动脚本
 - `start-windows.bat` — 便于在 Windows 下启动

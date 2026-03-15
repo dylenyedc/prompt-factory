@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>提示词管理站</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+    <title>SD-OutfitHub 管理站</title>
     <style>
         :root {
             --primary-color: #4F46E5;
@@ -18,6 +19,7 @@
         /* 顶部标题 */
         header { background-color: var(--card-bg); padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
         h1 { font-size: 1.2rem; color: var(--primary-color); }
+        .header-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
 
         /* 内容区域 */
         .container { padding: 16px; display: none; }
@@ -223,7 +225,8 @@
 <body>
 
     <header>
-        <h1>提示词管理小站</h1>
+        <h1>SD-OutfitHub 管理站</h1>
+        <div class="header-desc">Stable Diffusion 服装提示词的本地管理与检索</div>
     </header>
 
     <div id="tab-chars" class="container active">
