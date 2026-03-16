@@ -1,19 +1,12 @@
-const http = require('http');
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = __dirname;
-const DATA_FILE = path.join(ROOT_DIR, 'prompt-data.json');
-const INDEX_FILE = path.join(ROOT_DIR, 'index.html');
-
-function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'no-store'
-  });
-  res.end(JSON.stringify(payload));
-}
+const DATA_FILE = path.join(ROOT_DIR, 'data.json');
+const LEGACY_DATA_FILE = path.join(ROOT_DIR, 'prompt-data.json');
+const OUTFIT_CATEGORY_KEYS = ['tops', 'bottoms', 'shoes', 'headwear', 'accessories', 'weapons', 'others'];
 
 function readDataFile() {
   const raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -21,8 +14,75 @@ function readDataFile() {
 }
 
 function writeDataFile(data) {
-  const text = JSON.stringify(data, null, 2);
-  fs.writeFileSync(DATA_FILE, text, 'utf8');
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function newId() {
+  return 'id-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+}
+
+function deepClone(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function parseTags(value) {
+  const parts = String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  const uniq = [];
+  const seen = new Set();
+  parts.forEach(tag => {
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      uniq.push(tag);
+    }
+  });
+
+  return uniq;
+}
+
+function normalizeData(data) {
+  const normalized = deepClone(data || {});
+  ['chars', 'actions', 'env', 'outfit'].forEach(key => {
+    if (!Array.isArray(normalized[key])) {
+      normalized[key] = [];
+    }
+  });
+
+  ['chars', 'actions', 'env'].forEach(tabKey => {
+    normalized[tabKey] = normalized[tabKey].map(group => {
+      const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名分组', items: [] };
+      if (!Array.isArray(nextGroup.items)) {
+        nextGroup.items = [];
+      }
+      return nextGroup;
+    });
+  });
+
+  normalized.chars = normalized.chars.map(group => {
+    const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名角色', items: [], tags: [] };
+    if (!Array.isArray(nextGroup.items)) {
+      nextGroup.items = [];
+    }
+    if (!Array.isArray(nextGroup.tags)) {
+      nextGroup.tags = [];
+    }
+    return nextGroup;
+  });
+
+  normalized.outfit = normalized.outfit.map(group => {
+    const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名风格' };
+    OUTFIT_CATEGORY_KEYS.forEach(categoryKey => {
+      if (!Array.isArray(nextGroup[categoryKey])) {
+        nextGroup[categoryKey] = [];
+      }
+    });
+    return nextGroup;
+  });
+
+  return normalized;
 }
 
 function normalizeText(value) {
@@ -103,14 +163,10 @@ function searchPromptDatabase(data, keyword, options = {}) {
       const items = [];
 
       if (section === 'outfit') {
-        const categoryKeys = ['tops', 'bottoms', 'shoes', 'headwear', 'accessories', 'weapons', 'others'];
-        for (const categoryKey of categoryKeys) {
+        for (const categoryKey of OUTFIT_CATEGORY_KEYS) {
           const categoryItems = Array.isArray(group[categoryKey]) ? group[categoryKey] : [];
           for (const item of categoryItems) {
-            items.push({
-              ...item,
-              categoryKey
-            });
+            items.push({ ...item, categoryKey });
           }
         }
       } else {
@@ -192,25 +248,378 @@ function searchPromptDatabase(data, keyword, options = {}) {
   return results.slice(0, limit);
 }
 
-function handleAgentSkillSearch(req, res, parsedUrl) {
-  if (req.method !== 'GET') {
-    sendJson(res, 405, { message: 'Method Not Allowed' });
+function findGroup(data, tabId, groupId) {
+  const groups = Array.isArray(data[tabId]) ? data[tabId] : [];
+  return groups.find(group => group.id === groupId) || null;
+}
+
+function mutateData(originalData, action, payload = {}) {
+  const data = normalizeData(originalData);
+
+  if (action === 'addCharGroup') {
+    const title = String(payload.title || '').trim();
+    if (!title) {
+      throw new Error('请输入角色分组名称');
+    }
+    const existed = data.chars.some(group => group.title === title);
+    if (existed) {
+      throw new Error('该角色分组已存在');
+    }
+    data.chars.unshift({ id: newId(), title, tags: [], items: [] });
+    return { data, message: '已新增角色分组' };
+  }
+
+  if (action === 'addOutfitGroup') {
+    const title = String(payload.title || '').trim();
+    if (!title) {
+      throw new Error('请输入服装风格名称');
+    }
+    const existed = data.outfit.some(group => group.title === title);
+    if (existed) {
+      throw new Error('该服装风格已存在');
+    }
+    data.outfit.unshift({ id: newId(), title, tops: [], bottoms: [], shoes: [], headwear: [], accessories: [], weapons: [], others: [] });
+    return { data, message: '已新增服装风格' };
+  }
+
+  if (action === 'editCharGroupTags') {
+    const groupId = String(payload.groupId || '');
+    const group = findGroup(data, 'chars', groupId);
+    if (!group) {
+      throw new Error('角色分组不存在');
+    }
+    const tags = Array.isArray(payload.tags) ? parseTags(payload.tags.join(',')) : parseTags(payload.tagsRaw || '');
+    group.tags = tags;
+    return { data, message: '角色标签已更新' };
+  }
+
+  if (action === 'addCharTag') {
+    const group = findGroup(data, 'chars', String(payload.groupId || ''));
+    if (!group) {
+      throw new Error('角色分组不存在');
+    }
+    if (!Array.isArray(group.tags)) {
+      group.tags = [];
+    }
+    const tag = String(payload.tag || '').trim();
+    if (!tag) {
+      throw new Error('标签不能为空');
+    }
+    if (group.tags.includes(tag)) {
+      throw new Error('该标签已存在');
+    }
+    group.tags.push(tag);
+    return { data, message: '标签已添加' };
+  }
+
+  if (action === 'editCharTag') {
+    const group = findGroup(data, 'chars', String(payload.groupId || ''));
+    if (!group) {
+      throw new Error('角色分组不存在');
+    }
+    const oldTag = String(payload.oldTag || '');
+    const nextTag = String(payload.nextTag || '').trim();
+    if (!nextTag) {
+      throw new Error('标签不能为空');
+    }
+    if (!Array.isArray(group.tags)) {
+      group.tags = [];
+    }
+    const oldIndex = group.tags.indexOf(oldTag);
+    if (oldIndex < 0) {
+      throw new Error('标签不存在');
+    }
+    if (oldTag !== nextTag && group.tags.includes(nextTag)) {
+      throw new Error('该标签已存在');
+    }
+    group.tags[oldIndex] = nextTag;
+    return { data, message: '标签已更新' };
+  }
+
+  if (action === 'deleteCharTag') {
+    const group = findGroup(data, 'chars', String(payload.groupId || ''));
+    if (!group) {
+      throw new Error('角色分组不存在');
+    }
+    const oldTag = String(payload.tag || '');
+    if (!Array.isArray(group.tags) || !group.tags.includes(oldTag)) {
+      throw new Error('标签不存在');
+    }
+    group.tags = group.tags.filter(tag => tag !== oldTag);
+    return { data, message: '标签已删除' };
+  }
+
+  if (action === 'renameCharGroup') {
+    const groupId = String(payload.groupId || '');
+    const group = findGroup(data, 'chars', groupId);
+    if (!group) {
+      throw new Error('角色分组不存在');
+    }
+    const title = String(payload.title || '').trim();
+    if (!title) {
+      throw new Error('角色名称不能为空');
+    }
+    const duplicated = data.chars.some(item => item.id !== groupId && item.title === title);
+    if (duplicated) {
+      throw new Error('角色名称已存在');
+    }
+    group.title = title;
+    return { data, message: '角色名称已更新' };
+  }
+
+  if (action === 'deleteCharGroup') {
+    const groupId = String(payload.groupId || '');
+    const existed = data.chars.some(group => group.id === groupId);
+    if (!existed) {
+      throw new Error('角色分组不存在');
+    }
+    data.chars = data.chars.filter(group => group.id !== groupId);
+    return { data, message: '角色已删除' };
+  }
+
+  if (action === 'deleteItem') {
+    const tabId = String(payload.tabId || '');
+    if (!['chars', 'actions', 'env'].includes(tabId)) {
+      throw new Error('分组类型无效');
+    }
+    const group = findGroup(data, tabId, String(payload.groupId || ''));
+    if (!group) {
+      throw new Error('未找到所属分组');
+    }
+    const beforeCount = group.items.length;
+    group.items = group.items.filter(item => item.id !== String(payload.itemId || ''));
+    if (beforeCount === group.items.length) {
+      throw new Error('条目不存在，无法删除');
+    }
+    return { data, message: '条目已删除' };
+  }
+
+  if (action === 'saveItem') {
+    const tabId = String(payload.tabId || '');
+    const groupId = String(payload.groupId || '');
+    const itemId = String(payload.itemId || '');
+    const categoryKey = String(payload.categoryKey || '');
+    const name = String(payload.name || '').trim();
+    const prompt = String(payload.prompt || '').trim();
+
+    if (!name || !prompt) {
+      throw new Error('请填写完整信息');
+    }
+
+    if (tabId === 'outfit') {
+      if (!OUTFIT_CATEGORY_KEYS.includes(categoryKey)) {
+        throw new Error('服装分类无效');
+      }
+      const group = findGroup(data, 'outfit', groupId);
+      if (!group || !Array.isArray(group[categoryKey])) {
+        throw new Error('未找到所属风格或分类');
+      }
+      const target = group[categoryKey].find(item => item.id === itemId);
+      if (!target) {
+        throw new Error('条目不存在，可能已被删除');
+      }
+      target.name = name;
+      target.prompt = prompt;
+    } else {
+      if (!['chars', 'actions', 'env'].includes(tabId)) {
+        throw new Error('分组类型无效');
+      }
+      const group = findGroup(data, tabId, groupId);
+      if (!group) {
+        throw new Error('未找到所属分组');
+      }
+      const target = group.items.find(item => item.id === itemId);
+      if (!target) {
+        throw new Error('条目不存在，可能已被删除');
+      }
+      target.name = name;
+      target.prompt = prompt;
+    }
+
+    return { data, message: '提示词已更新' };
+  }
+
+  if (action === 'addItem') {
+    const tabId = String(payload.tabId || '');
+    const groupId = String(payload.groupId || '');
+    const categoryKey = String(payload.categoryKey || '');
+    const name = String(payload.name || '').trim();
+    const prompt = String(payload.prompt || '').trim();
+
+    if (!name || !prompt) {
+      throw new Error('请填写完整信息');
+    }
+
+    if (tabId === 'outfit') {
+      if (!OUTFIT_CATEGORY_KEYS.includes(categoryKey)) {
+        throw new Error('服装分类无效');
+      }
+      const group = findGroup(data, 'outfit', groupId);
+      if (!group || !Array.isArray(group[categoryKey])) {
+        throw new Error('未找到所属风格或分类');
+      }
+      group[categoryKey].unshift({ id: newId(), name, prompt });
+    } else {
+      if (!['chars', 'actions', 'env'].includes(tabId)) {
+        throw new Error('分组类型无效');
+      }
+      const group = findGroup(data, tabId, groupId);
+      if (!group) {
+        throw new Error('未找到分组');
+      }
+      group.items.unshift({ id: newId(), name, prompt });
+    }
+
+    return { data, message: '已新增提示词条目' };
+  }
+
+  if (action === 'renameOutfitGroup') {
+    const groupId = String(payload.groupId || '');
+    const group = findGroup(data, 'outfit', groupId);
+    if (!group) {
+      throw new Error('服装风格不存在');
+    }
+    const title = String(payload.title || '').trim();
+    if (!title) {
+      throw new Error('风格名称不能为空');
+    }
+    const duplicated = data.outfit.some(item => item.id !== groupId && item.title === title);
+    if (duplicated) {
+      throw new Error('风格名称已存在');
+    }
+    group.title = title;
+    return { data, message: '风格名称已更新' };
+  }
+
+  if (action === 'deleteOutfitGroup') {
+    const groupId = String(payload.groupId || '');
+    const existed = data.outfit.some(group => group.id === groupId);
+    if (!existed) {
+      throw new Error('服装风格不存在');
+    }
+    data.outfit = data.outfit.filter(group => group.id !== groupId);
+    return { data, message: '服装风格已删除' };
+  }
+
+  if (action === 'deleteOutfitItem') {
+    const group = findGroup(data, 'outfit', String(payload.groupId || ''));
+    const categoryKey = String(payload.categoryKey || '');
+    if (!group || !OUTFIT_CATEGORY_KEYS.includes(categoryKey) || !Array.isArray(group[categoryKey])) {
+      throw new Error('未找到所属风格或分类');
+    }
+    const beforeCount = group[categoryKey].length;
+    group[categoryKey] = group[categoryKey].filter(item => item.id !== String(payload.itemId || ''));
+    if (beforeCount === group[categoryKey].length) {
+      throw new Error('条目不存在，无法删除');
+    }
+    return { data, message: '条目已删除' };
+  }
+
+  throw new Error('未知操作类型');
+}
+
+function ensureDataFile() {
+  if (fs.existsSync(DATA_FILE)) {
     return;
   }
 
-  const keyword = parsedUrl.searchParams.get('keyword') || parsedUrl.searchParams.get('q') || '';
-  const limit = parsedUrl.searchParams.get('limit') || '10';
-  const section = parsedUrl.searchParams.get('section') || '';
+  if (fs.existsSync(LEGACY_DATA_FILE)) {
+    try {
+      const legacyRaw = fs.readFileSync(LEGACY_DATA_FILE, 'utf8');
+      const legacyData = JSON.parse(legacyRaw);
+      writeDataFile(normalizeData(legacyData));
+      return;
+    } catch (error) {
+      console.warn('legacy prompt-data.json 迁移失败，已创建空 data.json', error.message);
+    }
+  }
+
+  writeDataFile({ chars: [], actions: [], env: [], outfit: [] });
+}
+
+ensureDataFile();
+
+const app = express();
+app.use(express.json({ limit: '5mb' }));
+app.use(express.static(ROOT_DIR, { index: false }));
+
+app.get('/api/prompts', (req, res) => {
+  try {
+    const data = normalizeData(readDataFile());
+    res.set('Cache-Control', 'no-store');
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: '读取数据失败', detail: error.message });
+  }
+});
+
+app.get('/api/chars', (req, res) => {
+  try {
+    const data = normalizeData(readDataFile());
+    const chars = Array.isArray(data.chars) ? data.chars : [];
+    const result = chars.map(group => ({
+      id: group.id || '',
+      title: group.title || '',
+      tags: Array.isArray(group.tags) ? group.tags : [],
+      itemCount: Array.isArray(group.items) ? group.items.length : 0
+    }));
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ total: result.length, chars: result });
+  } catch (error) {
+    res.status(500).json({ message: '读取角色列表失败', detail: error.message });
+  }
+});
+
+app.put('/api/prompts', (req, res) => {
+  try {
+    const parsed = req.body;
+    if (!parsed || typeof parsed !== 'object') {
+      res.status(400).json({ message: '数据格式错误' });
+      return;
+    }
+
+    const normalized = normalizeData(parsed);
+    writeDataFile(normalized);
+    res.json({ message: '保存成功', data: normalized });
+  } catch (error) {
+    res.status(400).json({ message: '无法解析 JSON', detail: error.message });
+  }
+});
+
+app.post('/api/prompts/mutate', (req, res) => {
+  try {
+    const action = String(req.body && req.body.action || '');
+    const payload = req.body && req.body.payload ? req.body.payload : {};
+    if (!action) {
+      res.status(400).json({ message: '缺少 action 参数' });
+      return;
+    }
+
+    const current = readDataFile();
+    const mutated = mutateData(current, action, payload);
+    const normalized = normalizeData(mutated.data);
+    writeDataFile(normalized);
+    res.json({ message: mutated.message || '操作成功', data: normalized });
+  } catch (error) {
+    res.status(400).json({ message: error.message || '操作失败' });
+  }
+});
+
+app.get('/api/agent-skill/search', (req, res) => {
+  const keyword = req.query.keyword || req.query.q || '';
+  const limit = req.query.limit || '10';
+  const section = req.query.section || '';
 
   if (!String(keyword).trim()) {
-    sendJson(res, 400, { message: '缺少关键词参数，请提供 keyword 或 q' });
+    res.status(400).json({ message: '缺少关键词参数，请提供 keyword 或 q' });
     return;
   }
 
   try {
     const data = readDataFile();
     const results = searchPromptDatabase(data, keyword, { limit, section });
-    sendJson(res, 200, {
+    res.json({
       skill: 'prompt-search',
       query: String(keyword),
       section: section || 'all',
@@ -218,122 +627,14 @@ function handleAgentSkillSearch(req, res, parsedUrl) {
       results
     });
   } catch (error) {
-    sendJson(res, 500, { message: '检索失败', detail: error.message });
+    res.status(500).json({ message: '检索失败', detail: error.message });
   }
-}
-
-function handleApi(req, res) {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const pathname = parsedUrl.pathname;
-
-  if (pathname === '/api/agent-skill/search') {
-    handleAgentSkillSearch(req, res, parsedUrl);
-    return;
-  }
-
-  if (pathname !== '/api/prompts') {
-    sendJson(res, 404, { message: 'Not Found' });
-    return;
-  }
-
-  if (req.method === 'GET') {
-    try {
-      const data = readDataFile();
-      sendJson(res, 200, data);
-    } catch (error) {
-      sendJson(res, 500, { message: '读取数据失败', detail: error.message });
-    }
-    return;
-  }
-
-  if (req.method === 'PUT') {
-    let body = '';
-
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 5 * 1024 * 1024) {
-        req.destroy();
-      }
-    });
-
-    req.on('end', () => {
-      try {
-        const parsed = JSON.parse(body);
-        if (!parsed || typeof parsed !== 'object') {
-          sendJson(res, 400, { message: '数据格式错误' });
-          return;
-        }
-
-        writeDataFile(parsed);
-        sendJson(res, 200, { message: '保存成功' });
-      } catch (error) {
-        sendJson(res, 400, { message: '无法解析 JSON', detail: error.message });
-      }
-    });
-
-    return;
-  }
-
-  sendJson(res, 405, { message: 'Method Not Allowed' });
-}
-
-function handleStatic(req, res) {
-  const normalizedUrl = req.url === '/' ? '/index.html' : req.url;
-  const safePath = path.normalize(normalizedUrl).replace(/^([.][.][/\\])+/, '');
-  const target = path.join(ROOT_DIR, safePath);
-
-  if (!target.startsWith(ROOT_DIR)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
-
-  let filePath = target;
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    filePath = INDEX_FILE;
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeMap = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'application/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.svg': 'image/svg+xml',
-    '.png': 'image/png',
-    '.ico': 'image/x-icon'
-  };
-
-  const contentType = mimeMap[ext] || 'text/plain; charset=utf-8';
-  fs.readFile(filePath, (error, content) => {
-    if (error) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not Found');
-      return;
-    }
-
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(content);
-  });
-}
-
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_FILE)) {
-    writeDataFile({ chars: [], actions: [], env: [], outfit: [] });
-  }
-}
-
-ensureDataFile();
-
-const server = http.createServer((req, res) => {
-  if (req.url.startsWith('/api/')) {
-    handleApi(req, res);
-    return;
-  }
-
-  handleStatic(req, res);
 });
 
-server.listen(PORT, () => {
-  console.log(`SD-OutfitHub server is running at http://localhost:${PORT}`);
+app.get('*', (req, res) => {
+  res.sendFile(path.join(ROOT_DIR, 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log('SD-OutfitHub server is running at http://localhost:' + PORT);
 });

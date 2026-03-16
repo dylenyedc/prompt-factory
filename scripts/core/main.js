@@ -5,6 +5,7 @@ async function init() {
     bindGroupEvents();
     bindCharSearchEvents();
     bindTagFilterEvents();
+    bindCharSettingsModalEvents();
     initSidebarNavigation();
 }
 

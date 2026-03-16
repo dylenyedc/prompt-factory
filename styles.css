@@ -102,6 +102,105 @@ h1 { font-size: 1.2rem; color: var(--primary-color); }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px; }
 .card-header .card-title { margin: 0; border: none; padding: 0; }
 .group-actions { display: flex; gap: 8px; }
+.group-settings-wrap {
+    position: relative;
+}
+.settings-icon-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #D1D5DB;
+    background: #FFFFFF;
+    color: #374151;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+.modal-root {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 260;
+}
+.modal-root.active {
+    display: block;
+}
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.35);
+}
+.modal-panel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(92vw, 560px);
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
+}
+.modal-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.modal-close-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #6B7280;
+    cursor: pointer;
+}
+.modal-actions {
+    display: grid;
+    gap: 8px;
+}
+.modal-content-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 150px 1fr;
+}
+.modal-editor-panel {
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 10px;
+    background: #F8FAFC;
+    display: none;
+}
+.modal-editor-panel.active {
+    display: block;
+}
+.modal-editor-input,
+.modal-editor-textarea {
+    width: 100%;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    background: #FFF;
+}
+.modal-editor-textarea {
+    min-height: 96px;
+    resize: vertical;
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .modal-content-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* 列表与按钮 */
 .prompt-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #E5E7EB; }
@@ -316,6 +415,47 @@ h1 { font-size: 1.2rem; color: var(--primary-color); }
     background: #F3F4F6;
     border-radius: 999px;
     padding: 4px 10px;
+}
+.card-tag-btn {
+    border: 1px solid #E5E7EB;
+    cursor: pointer;
+    line-height: 1;
+}
+.card-tag-btn:active {
+    transform: scale(0.98);
+}
+.char-tag-edit-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.card-tag-edit-input {
+    border: 1px solid var(--primary-color);
+    outline: none;
+    min-width: 86px;
+    background: #FFFFFF;
+}
+.add-tag-btn {
+    background: #FFFFFF;
+    color: #4B5563;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+}
+.char-tag-delete-x {
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 999px;
+    background: #FEF2F2;
+    color: #991B1B;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.85rem;
+}
+.char-tag-delete-x:active {
+    background: #FEE2E2;
 }
 .search-filter-wrap {
     display: grid;

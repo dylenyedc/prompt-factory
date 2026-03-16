@@ -107,6 +107,33 @@
 
     </div>
 
+    <div id="char-settings-modal" class="modal-root">
+        <div class="modal-backdrop" data-action="close-char-settings-modal"></div>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-label="角色设置">
+            <div class="modal-title-row">
+                <div class="modal-title">角色设置</div>
+                <button class="modal-close-btn" data-action="close-char-settings-modal" type="button" aria-label="关闭">✕</button>
+            </div>
+            <div id="char-settings-modal-subtitle" class="hint-text" style="margin-bottom: 10px;"></div>
+            <div class="modal-content-grid">
+                <div class="modal-actions">
+                    <button id="char-settings-edit-tags-btn" class="copy-btn secondary-btn" type="button">编辑标签</button>
+                    <button id="char-settings-rename-btn" class="copy-btn secondary-btn" type="button">编辑角色名</button>
+                    <button id="char-settings-delete-btn" class="copy-btn danger-btn" type="button">删除角色</button>
+                </div>
+                <div id="char-settings-editor" class="modal-editor-panel">
+                    <div id="char-settings-editor-label" class="editor-title" style="margin-bottom: 8px;">编辑</div>
+                    <input id="char-settings-editor-input" class="modal-editor-input" type="text" />
+                    <textarea id="char-settings-editor-textarea" class="modal-editor-textarea"></textarea>
+                    <div class="form-actions" style="margin-top: 8px;">
+                        <button id="char-settings-editor-save-btn" class="copy-btn" type="button">保存</button>
+                        <button id="char-settings-editor-cancel-btn" class="copy-btn secondary-btn" type="button">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="app-page-community" class="app-page">
         <header>
             <h1>社区</h1>

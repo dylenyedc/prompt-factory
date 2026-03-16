@@ -1,0 +1,743 @@
+{
+  "chars": [
+    {
+      "id": "goldenglow",
+      "title": "⚡ Goldenglow 澄闪",
+      "items": [
+        {
+          "id": "gg-1",
+          "name": "默认作战服（黑外套+条纹过膝袜）",
+          "prompt": "goldenglow_\\(arknights\\), yellow eyes, pink hair, floppy ears, short hair, black hairband, side braid, blue hair bow, cat tail, black choker, bracelet, high-waist skirt, white shirt, jacket, id card, open clothes, vertical-striped thighhighs, garter straps, sneakers"
+        },
+        {
+          "id": "gg-2",
+          "name": "明夜礼装（长裙+围裙+翅膀）",
+          "prompt": "goldenglow_\\(maiden_for_the_bright_night\\), yellow eyes, pink hair, floppy ears, green hair bow, braided hair rings, red hairband, short hair, long skirt, sweater vest, red shirt, angel wings, see-through skirt, white apron, pom pom_\\(clothes\\), green detached_sleeves, fur trim, white kneehighs, black_shoes"
+        },
+        {
+          "id": "gg-3",
+          "name": "夏日花海（草帽白比基尼）",
+          "prompt": "goldenglow_\\(summer_flowers\\), yellow eyes, pink hair, floppy ears, (braid:1.2), short hair, eyewear on head, straw hat, food-themed hair ornament, hairclip, sunglasses, bracelet, white bikini, navel, swimsuit_cover-up, open_clothes, short shorts, bridal garter, sandals"
+        },
+        {
+          "id": "gg-4",
+          "name": "花园派对（爱心饰品礼裙）",
+          "prompt": "goldenglow_\\(party_in_the_garden\\), yellow eyes, pink hair, floppy ears, heart hair ornament, red hair bow, single braid, long hair, heart_choker, white gloves, puffy short sleeves, frilled dress, two-tone_dress, frilled apron, red skirt, asymmetrical legwear, vertical-striped thighhigh, white thighhighs, pink high heels"
+        },
+        {
+          "id": "gg-5",
+          "name": "女仆套装（黑裙女仆头饰）",
+          "prompt": "goldenglow_\\(maid\\), yellow eyes, pink hair, floppy ears, single braid, maid headdress, maid apron, black dress, kneehighs, enmaided, heart vest, black_loafers"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:维多利亚",
+        "其他:高人气"
+      ]
+    },
+    {
+      "id": "la-pluma",
+      "title": "🪶 La Pluma 羽毛笔",
+      "items": [
+        {
+          "id": "lp-1",
+          "name": "默认战斗服（露肩毛领外套+短裤绑带）",
+          "prompt": "la_pluma_\\(arknights\\), black hair, grey eyes, feather hair, hairclip, sleeveless shirt, thigh belt, high_belt, short shorts, fingerless gloves, platform_sandals, fur-trimmed_coat, off_shoulder, bare_shoulder"
+        },
+        {
+          "id": "lp-2",
+          "name": "轻装便携版（无外套清爽作战）",
+          "prompt": "la_pluma_\\(arknights\\), black hair, grey eyes, feather hair, hairclip, sleeveless shirt, thigh belt, high_belt, short shorts, fingerless gloves, platform_sandals"
+        },
+        {
+          "id": "lp-3",
+          "name": "夏日花海（外套叠穿白色比基尼）",
+          "prompt": "la_pluma_\\(summer_flowers\\)_\\(arknights\\), black hair, grey eyes, feather hair, hair bun, jacket over swimsuit, white bikini, goggles around neck, id card, thigh strap, frilled bikini, see-through jacket, sandals"
+        },
+        {
+          "id": "lp-4",
+          "name": "罗森联动（蓝白层叠裙制服风）",
+          "prompt": "la_pluma_\\(arknights\\), lapu_ma, 1girl, solo, white hairband, ahoge, long sleeves, blue shirt, short hair, white socks, ribbon, bow, medium breasts, black hair, two-tone dress, black eyes, layered dress, blue dress lining, frilled socks, white footwear"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW"
+      ]
+    },
+    {
+      "id": "schwarz",
+      "title": "🐈 Schwarz 黑",
+      "items": [
+        {
+          "id": "sw-1",
+          "name": "默认作战服（透视外套+短裤腿带）",
+          "prompt": "schwarz_\\(arknights\\), yellow eyes, grey hair, ponytail, cat ears, cat_tail, black scarf, see-through jacket, crop top, thigh belt, thigh punch, short shorts, black footwear"
+        },
+        {
+          "id": "sw-2",
+          "name": "礼物主题（粉夹克+黑色过膝袜）",
+          "prompt": "schwarz_\\(presents\\), yellow eyes, grey hair, cat_ears, ponytail, neck_bell, cat_tail, fingerless gloves, pink_jacket, red_bow, open jacket, short shorts, tube top, white scarf, black thighhighs, high heel boots"
+        },
+        {
+          "id": "sw-3",
+          "name": "挂脖礼服（露肩鸡尾酒礼裙）",
+          "prompt": "schwarz_\\(halter_dress\\), yellow eyes, grey hair, ponytail, cat ears, cat_tail, bare shoulders, cocktail dress, black choker, thigh strap, earrings, high heels"
+        },
+        {
+          "id": "sw-4",
+          "name": "天际线（鸭舌帽+白色紧身裤）",
+          "prompt": "schwarz_\\(skyline\\), yellow eyes, grey hair, long hair, cat_ears, cabbie hat, thigh strap, white tight pants, headset, jacket, black_footwear, sneakers"
+        },
+        {
+          "id": "sw-5",
+          "name": "中式礼装（露背旗袍风）",
+          "prompt": "schwarz_\\(chinese_dress\\), yellow eyes, grey hair, single hair bun, cat_ears, cat tail, backless dress, bare back, thighband pantyhose, high heels, cleavage cutout, from behind"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW"
+      ]
+    },
+    {
+      "id": "ling",
+      "title": "🐉 Ling 令",
+      "items": [
+        {
+          "id": "ling-1",
+          "name": "默认术师装（白外套+黄领带+龙尾）",
+          "prompt": "ling_\\(arknights\\), blue eyes, blue hair, dragon horns, pointy ears, braid, streaked hair, yellow earrings, colored_extremities, jewelry, white coat, yellow necktie, short shorts, strapless shirt, elbow gloves, see-through, dragon tail, thigh strap, lantern, ankle boots, holding staff, gourd"
+        },
+        {
+          "id": "ling-2",
+          "name": "洗弦主题（中式宽袖+流苏披挂）",
+          "prompt": "ling_\\(it_does_wash_the_strings\\)_\\(arknights\\), blue eyes, blue hair, dragon horns, pointy ears, braid, streaked hair, golden earrings, colored_extremities, necklace, detached sleeves, wide sleeves, chinese clothes, pelvic curtain, sideboob, dragon tail, tassel"
+        },
+        {
+          "id": "ling-3",
+          "name": "怀古高崖（高马尾露腰长夹克）",
+          "prompt": "ling_\\(towering_is_cliff_of_nostalgia\\)_\\(arknights\\), multicolored eyes, blue hair, dragon horns, pointy ears, streaked hair, colored_extremities, blue earrings, high ponytail, black shorts, off shoulder, detached collar, blue necktie, midriff, long jacket, tube top, dragon tail, thigh strap, boots, holding staff"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW"
+      ]
+    },
+    {
+      "id": "amiya",
+      "title": "🐰 Amiya 阿米娅",
+      "items": [
+        {
+          "id": "amiya-1",
+          "name": "音律联觉2022（白礼裙+绒边披肩）",
+          "prompt": "amiya_\\(ambience_synesthesia_2022\\), blue_eyes, brown hair, rabbit ears, black tiara, bare shoulders, detached_collar, frilled_collar, star_hair_ornament, armlet, white dress, layered_dress, puffy short sleeves, jewelry, fur-trimmed cape, necklace, multiple_rings, white_pantyhose, high_heels"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:适合全身像",
+        "其他:服装层次明显"
+      ]
+    },
+    {
+      "id": "u-official",
+      "title": "🎧 U-official U酱",
+      "items": [
+        {
+          "id": "uof-1",
+          "name": "偶像常服（双丸子钻头发+紫裙）",
+          "prompt": "u-official_\\(arknights\\), pink eyes, pink hair, multicolored hair, twin drills, double bun, cone hair bun, headphones, black choker, necktie, purple skirt, asymmetrical legwear"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:发色辨识度高",
+        "其他:单人图友好"
+      ]
+    },
+    {
+      "id": "archetto",
+      "title": "🏹 Archetto 空弦",
+      "items": [
+        {
+          "id": "arc-1",
+          "name": "默认制服（黑裙+红披风+肩章）",
+          "prompt": "archetto_\\(arknights\\), heterochromia, blonde hair, black dress, red cape, partially fingerless gloves, epaulettes, tiara, thigh strap, knee boots"
+        },
+        {
+          "id": "arc-2",
+          "name": "公关策略（蓝夹克露腰短裙）",
+          "prompt": "archetto_\\(publicity_strategy\\)_\\(arknights\\), heterochromia, blonde hair, parted bangs, blue jacket, red bow, white gloves, miniskirt, midriff, fingerless gloves"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:可爱系",
+        "其他:二次元风格"
+      ]
+    },
+    {
+      "id": "poncirus",
+      "title": "🌿 Poncirus 青枳",
+      "items": [
+        {
+          "id": "pon-1",
+          "name": "默认战斗装（帽羽外套+黑过膝袜）",
+          "prompt": "poncirus_\\(arknights\\), purple eyes, green hair, hat feather, hat, off shoulder, belt, black thighhighs, jacket, shorts, high heel boots, hammer"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:冷艳系",
+        "其他:细节堆叠友好"
+      ]
+    },
+    {
+      "id": "almond",
+      "title": "🧢 Almond 杏仁",
+      "items": [
+        {
+          "id": "alm-1",
+          "name": "默认便装（遮阳帽+蓝夹克百褶裙）",
+          "prompt": "almond_\\(arknights\\), blue eyes, short hair, visor cap, brown hair, fingerless gloves, white shirt, blue jacket, pleated skirt, hairclip, id card, sneakers, loose socks"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:优雅系",
+        "其他:光影表现佳"
+      ]
+    },
+    {
+      "id": "astesia",
+      "title": "⭐ Astesia 星极",
+      "items": [
+        {
+          "id": "ast-1",
+          "name": "默认术师装（蓝裙白衬衫+持剑持星球）",
+          "prompt": "astesia_\\(arknights\\), blue hair, blue eyes, white pupils, bird tail, white shirt, blue skirt, puffy sleeves, neck ribbon, high heels, holding sword, holding globe"
+        },
+        {
+          "id": "ast-2",
+          "name": "星空寻迹（长礼裙+披风望远镜）",
+          "prompt": "astesia_\\(starseeker\\)_\\(arknights\\), blue hair, blue eyes, white pupils, bird tail, elbow gloves, puffy short sleeves, layered dress, hat, cape, high heels, white pantyhose, (long_dress:1), telescope"
+        },
+        {
+          "id": "ast-3",
+          "name": "宫廷礼服（白礼裙露肩+光环）",
+          "prompt": "astesia_\\(frlibe_on_the_palace\\)_\\(arknights\\), blue hair, blue eyes, white pupils, bird tail, halo, gradient gloves, white high heels, bare shoulders, white pantyhose, detached sleeves, white dress, holding sword, holding microphone"
+        },
+        {
+          "id": "ast-4",
+          "name": "奇趣工坊（黄短夹克+低双马尾）",
+          "prompt": "astesia_\\(fantastic_crafts\\)_\\(arknights\\), blue hair, blue eyes, white pupils, bird tail, visor cap, low twintails, fingerless gloves, yellow short jacket, white short dress, thigh strap, kneehighs, sneakers, holding case"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:战斗系",
+        "其他:服装层次明显"
+      ]
+    },
+    {
+      "id": "astgenne",
+      "title": "🔷 Astgenne 星源",
+      "items": [
+        {
+          "id": "astg-1",
+          "name": "默认战术装（高马尾+护目镜+法杖）",
+          "prompt": "astgenne_\\(arknights\\), blue eyes, blue hair, high ponytail, diamond-shaped pupils, black gloves, goggles on head, black thighhighs, white skirt, blue vest, bird tail, cape, knee boots, holding wand"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:日常系",
+        "其他:单人图友好"
+      ]
+    },
+    {
+      "id": "fartooth",
+      "title": "🏹 Fartooth 远牙",
+      "items": [
+        {
+          "id": "far-1",
+          "name": "重装骑士风（披风护臂+装甲靴）",
+          "prompt": "fartooth_\\(arknights\\), feather hair, grey hair, yellow eyes, high-waist shorts, white shirt, cape, gauntlets, visor \\(armor\\), helmet, thigh strap, armored boots, holding weapon"
+        },
+        {
+          "id": "far-2",
+          "name": "轻甲便装（高腰短裤+立领衬衫）",
+          "prompt": "fartooth_\\(arknights\\), feather hair, grey hair, yellow eyes, high-waist shorts, collared shirt, thigh strap"
+        },
+        {
+          "id": "far-3",
+          "name": "听风而歌（绿夹克露腰骑行短裤）",
+          "prompt": "fartooth_\\(hear_the_wind_sing\\)_\\(arknights\\), feather hair, grey hair, yellow eyes, hat, hair bun, crop top, midriff, bike shorts, green jacket, bare shoulders, sneakers"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:礼装系",
+        "其他:二次元风格"
+      ]
+    },
+    {
+      "id": "mio",
+      "title": "🗡️ Mio 澪",
+      "items": [
+        {
+          "id": "mio-1",
+          "name": "和风本体（超长渐变发+和服）",
+          "prompt": "mio \\(arknights\\), lipgloss, eyeshadow, grey eyes, blunt bangs, black hair, gradient hair, absurdly long hair, kimono, white long sleeve, black long sleeves, a black hand, a black arm, solo, katana, chain tail"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:发饰亮点",
+        "其他:细节堆叠友好"
+      ]
+    },
+    {
+      "id": "haruka",
+      "title": "🎤 Haruka 遥",
+      "items": [
+        {
+          "id": "har-1",
+          "name": "偶像服本体（高马尾粉红渐变发）",
+          "prompt": "haruka_\\(arknights\\), harukaori, long hair, high ponytail, gradient hair, pink hair, red colored tips, curly hair, swept bangs, red eyes, pointy ears, mole under each eye, hair bow, red bow, hair ornament"
+        },
+        {
+          "id": "har-2",
+          "name": "偶像演出服（蓝礼裙+红手套）",
+          "prompt": "harukaoricloth, earrings, red ribbon choker, white cropped jacket, puffy sleeves, red gloves, bead bracelet, blue strapless dress, blue frilled dress, red corset, black belt, drawstring, layered skirt, red overskirt, white overskirt, id card, red gemstone, red kneehighs, white lace-up boots, knee boots"
+        },
+        {
+          "id": "har-3",
+          "name": "私服本体（单侧丸子头+黑外套）",
+          "prompt": "haruka_\\(arknights\\), harukaoft, very long hair, single side bun, gradient hair, pink hair, red colored tips, curly hair, swept bangs, red eyes, pointy ears, mole under each eye, stud, earrings, (short shorts:1.1), (black coat), black socks, platform footwear"
+        },
+        {
+          "id": "har-4",
+          "name": "私服服装（棒球帽+口罩街头风）",
+          "prompt": "harukaoftcloth, black baseball cap, orange-tinted eyewear, black mouth mask, mask pull, black choker, black jacket, keychain, white shirt, print shirt, black shorts, red shoulder bag, black ribbed socks, black sneakers"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:动态姿势友好",
+        "其他:光影表现佳"
+      ]
+    },
+    {
+      "id": "lemuen",
+      "title": "🪽 Lemuen 蕾缪安",
+      "items": [
+        {
+          "id": "lem-1",
+          "name": "默认圣装（光环能量翼+交叉系带裙）",
+          "prompt": "lemuen_\\(arknights\\), pink eyes, pink hair, straight_hair, white halo, energy wings, white choker, cropped jacket, cross-laced dress, bustier, belt buckle, arm belt, zipper, zettai ryouiki, white_shirt, flower_ornament, lace-up boots"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:适合近景特写",
+        "其他:服装层次明显"
+      ]
+    },
+    {
+      "id": "mulberry",
+      "title": "🌿 Mulberry 桑葚",
+      "items": [
+        {
+          "id": "mul-1",
+          "name": "默认医疗装（兜帽披肩+法杖腰包）",
+          "prompt": "mulberry_\\(arknights\\), goggles on head, grey hair, blue eyes, feather hair, hooded cape, fingerless gloves, sleeveless dress, bead bracelet, thigh strap, id card, pouch, boots, black socks, holding staff, hood down"
+        },
+        {
+          "id": "mul-2",
+          "name": "草药采集（双丸子头+围裙短裤）",
+          "prompt": "mulberry_\\(plant_crude_drug\\)_\\(arknights\\), grey hair, purple eyes, feather hair, double bun, bun cover, long hair, green glove, single glove, asymmetrical sleeves, apron, shorts, black shirt, black socks"
+        },
+        {
+          "id": "mul-3",
+          "name": "月映倒影（中式渐变长裙）",
+          "prompt": "mulberry_\\(reflection_that_of_the_moons\\)_\\(arknights\\), grey hair, blue eyes, feather hair, butterfly hair ornament, blue ribbon, hair bow, gradient dress, see-through sleeves, wide sleeves, chinese clothes, high heels"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:高人气",
+        "其他:单人图友好"
+      ]
+    },
+    {
+      "id": "exusiai-new-covenant",
+      "title": "✝️ Exusiai 新约能天使",
+      "items": [
+        {
+          "id": "exc-1",
+          "name": "默认形象（黑夹克+白过膝袜）",
+          "prompt": "Exusiai the New Covenant, jewelry, ahoge, earrings, wings, halo, cross, orange eyes, red hair, short hair, one side up, bangs, hair between eyes, hair over one eye, cross earrings, energy wings, detached wings, jacket, black jacket, open jacket, open clothes, long sleeves, shirt, gloves, black gloves, fingerless gloves, shorts, black shorts, thigh strap, thighhighs, white thighhighs, boots, ankle boots, black footwear"
+        },
+        {
+          "id": "exc-2",
+          "name": "修女礼装（十字项链+黑礼服）",
+          "prompt": "Exusiai the New Covenant, jewelry, earrings, wings, halo, cross, orange eyes, red hair, short hair, bangs, hair between eyes, hair over one eye, cross earrings, energy wings, detached wings, nun, necklace, cross necklace, gloves, black gloves, fingerless gloves, dress, black dress, habit, long sleeves, wide sleeves, pantyhose, white pantyhose, boots, black footwear, cross-laced footwear, lace-up boots, high heels"
+        },
+        {
+          "id": "exc-3",
+          "name": "幼年主题（披风衬衫+腿套）",
+          "prompt": "Exusiai the New Covenant, halo, orange eyes, red hair, ahoge, short hair, bangs, hair between eyes, wings, hair over one eye, energy wings, detached wings, child, one side up, cape, black cape, cloak, shirt, white shirt, collared shirt, long sleeves, necktie, yellow necktie, shorts, black shorts, shorts covered by shirt, leg warmers, black leg warmers, short leg warmers, shoes, leather shoes, black footwear"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:立绘精致",
+        "其他:二次元风格"
+      ]
+    },
+    {
+      "id": "istina",
+      "title": "📚 Istina 真理",
+      "items": [
+        {
+          "id": "ist-1",
+          "name": "默认学院装（贝雷帽披风+单麻花辫）",
+          "prompt": "istina_\\(arknights\\), aqua eyes, aqua hair, bear ears, single braid, monocle, aqua necktie, brown cloak, brown beret, kneehighs, star hair ornament, pleated skirt, sweater vest, collared shirt, brown loafers, holding_book"
+        },
+        {
+          "id": "ist-2",
+          "name": "书香礼裙（双辫花饰+荷叶边连衣裙）",
+          "prompt": "istina_\\(bibliosmia\\), aqua eyes, aqua hair, monocle, bear ears, twin braids, frilled hairband, red neckerchief, hair flower, white socks, frilled dress, cropped jacket, sleeves, white shirt, black shoes, holding_book"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:服饰细节丰富",
+        "其他:细节堆叠友好"
+      ]
+    },
+    {
+      "id": "zima",
+      "title": "🪓 Zima 凛冬",
+      "items": [
+        {
+          "id": "zim-1",
+          "name": "默认校服（毛领外套+红裤袜）",
+          "prompt": "zima_\\(arknights\\), brown hair, blue eyes, streaked hair, bear ears, black choker, earphones, sailor collar, pleated skirt, red neckerchief, school uniform, fur-trimmed jacket, thigh belt, red pantyhose, brown socks, lace-up boots, holding_axe"
+        },
+        {
+          "id": "zim-2",
+          "name": "整备出发（军帽蓝衬衫+黑外套）",
+          "prompt": "zima_\\(ready_to_go\\), brown hair, blue eyes, streaked hair, bear ears, peaked cap, military hat, wing collar, white skirt, blue shirt, black coat, thigh belt, off shoulder, red pantyhose, lace-up boots, holding_axe"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:适合半身像",
+        "其他:光影表现佳"
+      ]
+    },
+    {
+      "id": "magallan",
+      "title": "🧭 Magallan 麦哲伦",
+      "items": [
+        {
+          "id": "mag-1",
+          "name": "默认极地装（鸟面罩+冬季外套）",
+          "prompt": "magallan_\\(arknights\\), yellow eyes, brown hair, streaked hair, bird mask, mask around neck, earrings, white gloves, backpack, winter coat, skates, holding suitcase, drone, respirator, theodolite, tripod"
+        },
+        {
+          "id": "mag-2",
+          "name": "精二风格（高领毛衣+腰系外套）",
+          "prompt": "magallan_\\(\\), yellow eyes, brown hair, streaked hair, bird mask, mask around neck, single earring, single glove, turtleneck sweater, coat around waist, strap between breasts, jewelry, skates, holding suitcase, drone, respirator, theodolite, tripod"
+        },
+        {
+          "id": "mag-3",
+          "name": "刨冰记忆（单侧发髻+冰刀）",
+          "prompt": "magallan_\\(shaved-ice_memories\\), yellow eyes, brown hair, streaked hair, single side bun, headband, see-through mask, mask around neck, snowflake earrings, single glove, nejiri hachimaki, collared shirt, wide pants, jacket, ice skates, holding suitcase, drone, respirator, theodolite, tripod"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:适合全身像",
+        "其他:服装层次明显"
+      ]
+    },
+    {
+      "id": "mayer",
+      "title": "🦦 Mayer 梅尔",
+      "items": [
+        {
+          "id": "may-1",
+          "name": "默认科研装（高领毛衣裙+橙夹克）",
+          "prompt": "mayer_\\(arknights\\), grey eyes, brown hair, short hair with long locks, black pantyhose, turtleneck sweater, sweater dress, black gloves, orange jacket, open jacket, off shoulder, belt, miniskirt, sneakers, otter tail"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:发色辨识度高",
+        "其他:单人图友好"
+      ]
+    },
+    {
+      "id": "muelsyse",
+      "title": "💧 Muelsyse 缪尔赛思",
+      "items": [
+        {
+          "id": "mue-1",
+          "name": "默认服装（开襟外套+露肩上衣+高跟靴）",
+          "prompt": "muelsyse_\\(arknights\\), mumu, long hair, brown hair, golden eyes, pointy ears, mole, hair ornament, strapless top, shirt, skirt, open coat, coat, high heel boots, umbrella"
+        },
+        {
+          "id": "mue-2",
+          "name": "四周年服装（短上衣+牛仔短裤+披纱）",
+          "prompt": "muelsyse_\\(arknights\\), mumu, long hair, brown hair, golden eyes, pointy ears, mole, hair ornament, crop top, denim shorts, sarong, choker, jacket, sneakers"
+        },
+        {
+          "id": "mue-3",
+          "name": "幼枝主题（连衣裙+发饰脚链耳饰）",
+          "prompt": "muelsyse_\\(arknights\\), mumu, long hair, brown hair, golden eyes, pointy ears, mole, dress, hair ornament, anklet, earrings"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:可爱系",
+        "其他:二次元风格"
+      ]
+    },
+    {
+      "id": "lin",
+      "title": "🧿 Lin 林雨霞",
+      "items": [
+        {
+          "id": "lin-1",
+          "name": "默认服装（黑发箍高领黑裙）",
+          "prompt": "lin_\\(arknights\\), pink eyes, pink hair, long hair, black hairband, mouse ears, mouse tail, ponytail, tassel earrings, necklace, tassel, turtleneck, jewelry, double-breasted, black dress, black pantyhose, wide sleeves, single_thigh_strap, black belt, high heel boots, fold-over_boots"
+        },
+        {
+          "id": "lin-2",
+          "name": "蜃景汉服（白发箍紫长裙）",
+          "prompt": "lin_\\(heavenly_mirage\\), pink eyes, pink hair, long hair, white hairband, mouse ears, ponytail, hairpin, silver earrings, pearl hair ornament, ear_flower, mouse tail, hanfu, mandarin_collar, black_shirt, white jacket, purple long skirt, see-through_sleeves, wide sleeves, see-through_hagoromo, jewelry, black high heel boots"
+        },
+        {
+          "id": "lin-3",
+          "name": "旧泳装（黑比基尼+紫色外套）",
+          "prompt": "lin_\\(swimsuit\\), pink eyes, pink hair, long hair, hair ornament, hairclip, mouse ears, mouse tail, ponytail, eyewear on head, swimsuit, black bikini, necklace, bikini_ribbon, purple jacket, open jacket, open shorts, octagonal_eyewear, thigh strap, black choker, micro shorts, sandals"
+        },
+        {
+          "id": "lin-4",
+          "name": "夏日花序（透视外套+O环比基尼）",
+          "prompt": "lin_\\(summer_flowers\\), pink eyes, pink hair, long hair, hair ornament, hairclip, mouse ears, mouse tail, ponytail, see-through choker, necklace, eyewear on head, tinted_eyewear, see-through_jacket, bikini_under_clothes, o-ring_bikini, sleeveless_shirt, see-through, white thigh strap, sandals"
+        },
+        {
+          "id": "lin-5",
+          "name": "附加镜头（背面露背视角）",
+          "prompt": "from behind, back cutout, tail_through_clothes"
+        },
+        {
+          "id": "lin-6",
+          "name": "附加道具（持剑）",
+          "prompt": "holding sword"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:冷艳系",
+        "其他:细节堆叠友好"
+      ]
+    },
+    {
+      "id": "snegurochka",
+      "title": "❄️ Snegurochka 冬时",
+      "items": [
+        {
+          "id": "sne-1",
+          "name": "默认服装（毛领外套+条纹连体衣）",
+          "prompt": "snegurochka_\\(arknights\\), 1girl, feather hair, black hair, parted hair, long hair, wavy hair, aqua eyes, bags under eyes, glasses, fur-trimmed coat, open coat, white shirt, dress shirt, torn shirt, vertical-striped bodysuit, bodysuit under clothes, fingerless gloves, green leg warmers, brown shoes"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:优雅系",
+        "其他:光影表现佳"
+      ]
+    },
+    {
+      "id": "silence",
+      "title": "🦉 Silence 赫默",
+      "items": [
+        {
+          "id": "sil-1",
+          "name": "默认服装（实验外套+单侧腿饰）",
+          "prompt": "silence_\\(arknights\\), orange eyes, brown hair, feather hair, owl ears, semi-rimless eyewear, rhine lab logo, wide sleeves, id card, sweater coat, buttons, single thighhigh, thigh strap, test tube, asymmetrical legwear, single_thighhigh, single sock, white footwear"
+        },
+        {
+          "id": "sil-2",
+          "name": "霜息（高领围巾+白夹克）",
+          "prompt": "silence_\\(frost_breath\\), orange eyes, brown hair, feather hair, owl ears, semi-rimless eyewear, rhine lab logo, long sleeves, id card, turtleneck sweater, scarf, white jacket, black pantyhose, ankle boots"
+        },
+        {
+          "id": "sil-3",
+          "name": "附加部件（单翼羽翼）",
+          "prompt": "single wing, feather wing"
+        }
+      ],
+      "tags": [
+        "作品:明日方舟",
+        "性别:女",
+        "分级:SFW",
+        "其他:战斗系",
+        "其他:服装层次明显"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "action-basic",
+      "title": "🏃‍♂️ 动态与姿势",
+      "items": [
+        {
+          "id": "id-1773577440397-7040",
+          "name": "4了",
+          "prompt": "fullbody,from below,parted legs,open mouth,(empty eyes:1.3),\n(unconscious:1.4),(looking away:1.3),(drooling:1.4),streaming tears,(sleepy:1.2),deadpan,(on back:1.4),(drooling:1.4),(dilated_pupils:1.4),(bokeh:1.2),(lying:1.3),(pee:1.2),pussy juice"
+        },
+        {
+          "id": "ab-1",
+          "name": "拔剑姿势",
+          "prompt": "dynamic pose, drawing sword, leaning forward, looking at viewer, intense action"
+        },
+        {
+          "id": "ab-2",
+          "name": "漂浮半空",
+          "prompt": "floating in the air, weightless, zero gravity, hair blowing in the wind, magical pose"
+        },
+        {
+          "id": "ab-3",
+          "name": "回眸一笑",
+          "prompt": "looking back over shoulder, gentle smile, eye contact, cinematic angle"
+        },
+        {
+          "id": "ab-4",
+          "name": "持杖立姿",
+          "prompt": "standing pose, holding staff, full body, composed expression, character focus"
+        },
+        {
+          "id": "ab-5",
+          "name": "持剑展示",
+          "prompt": "heroic pose, holding sword, full body, detailed costume, dramatic lighting"
+        }
+      ]
+    }
+  ],
+  "env": [
+    {
+      "id": "env-light",
+      "title": "🌄 环境与光影",
+      "items": [
+        {
+          "id": "el-1",
+          "name": "废弃城市落日",
+          "prompt": "ruined city, overgrown with plants, sunset, golden hour, god rays, atmospheric lighting"
+        },
+        {
+          "id": "el-2",
+          "name": "魔法森林起雾",
+          "prompt": "magical forest, glowing mushrooms, dense fog, mystical atmosphere, fireflies"
+        },
+        {
+          "id": "el-3",
+          "name": "教堂场景",
+          "prompt": "church interior, soft light beams, wooden benches, detailed architecture"
+        },
+        {
+          "id": "el-4",
+          "name": "木地板室内",
+          "prompt": "indoor scene, wooden floor, warm ambient light, cinematic composition"
+        }
+      ]
+    },
+    {
+      "id": "env-quality",
+      "title": "💎 画质提升词",
+      "items": [
+        {
+          "id": "id-1773577324860-2906",
+          "name": "IL质量",
+          "prompt": "masterpiece, best quality, amazing quality, very awa, very aesthetic, high resolution, ultra-detailed, absurdres, newest,"
+        },
+        {
+          "id": "eq-1",
+          "name": "通用高画质",
+          "prompt": "masterpiece, best quality, ultra-detailed, 8k resolution, finely detailed, photorealistic"
+        },
+        {
+          "id": "eq-2",
+          "name": "二次元质感",
+          "prompt": "anime visual novel style, vivid colors, clear lines, high contrast"
+        }
+      ]
+    }
+  ],
+  "outfit": [
+    {
+      "id": "id-1773589016892-7991",
+      "title": "街头机能风",
+      "tops": [],
+      "bottoms": [],
+      "shoes": [],
+      "headwear": [],
+      "accessories": [],
+      "weapons": [],
+      "others": []
+    }
+  ]
+}

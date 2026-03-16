@@ -16,6 +16,20 @@ async function loadPromptData() {
     return normalizePromptData(JSON.parse(JSON.stringify(defaultPromptData)));
 }
 
+async function loadCharList() {
+    try {
+        const response = await fetch('/api/chars');
+        if (!response.ok) {
+            throw new Error('角色列表读取失败: ' + response.status);
+        }
+        const result = await response.json();
+        return Array.isArray(result && result.chars) ? result.chars : [];
+    } catch (e) {
+        console.warn('读取角色列表失败', e);
+        return [];
+    }
+}
+
 async function savePromptData() {
     try {
         const response = await fetch('/api/prompts', {
@@ -35,6 +49,44 @@ async function savePromptData() {
         console.error('保存失败', e);
         showToast('保存失败，请检查服务器状态');
         return false;
+    }
+}
+
+async function mutatePromptData(action, payload) {
+    try {
+        const response = await fetch('/api/prompts/mutate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: action, payload: payload || {} })
+        });
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (_) {
+            result = null;
+        }
+
+        if (!response.ok) {
+            const message = result && result.message ? result.message : '操作失败';
+            showToast(message);
+            return { ok: false, message: message };
+        }
+
+        if (result && result.data) {
+            promptData = normalizePromptData(result.data);
+        }
+
+        return {
+            ok: true,
+            message: result && result.message ? result.message : '操作成功'
+        };
+    } catch (e) {
+        console.error('请求后端变更失败', e);
+        showToast('请求失败，请检查服务器状态');
+        return { ok: false, message: '请求失败' };
     }
 }
 

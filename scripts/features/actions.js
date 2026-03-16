@@ -1,3 +1,20 @@
+async function addCharGroupByTitle(titleRaw) {
+    const title = String(titleRaw || '').trim();
+    if (!title) {
+        showToast('请输入角色分组名称');
+        return false;
+    }
+
+    const result = await mutatePromptData('addCharGroup', { title: title });
+    if (!result.ok) {
+        return false;
+    }
+
+    renderTab('chars');
+    showToast(result.message);
+    return true;
+}
+
 async function editCharGroupTags(groupId) {
     const groups = promptData.chars || [];
     const targetGroup = groups.find(function (group) {
@@ -5,23 +22,23 @@ async function editCharGroupTags(groupId) {
     });
     if (!targetGroup) {
         showToast('角色分组不存在');
-        return;
+        return false;
     }
 
     const oldTagsText = (targetGroup.tags || []).join(', ');
     const nextTagsRaw = window.prompt('请输入标签，多个标签用英文逗号分隔；建议用“分类:标签”格式，例如：作品:明日方舟, 性别:女, 分级:SFW, 其他:维多利亚', oldTagsText);
     if (nextTagsRaw === null) {
-        return;
+        return false;
     }
 
-    const nextTags = parseTags(nextTagsRaw);
-    const backup = deepClone(promptData);
-    targetGroup.tags = nextTags;
+    return editCharGroupTagsByValue(groupId, nextTagsRaw);
+}
 
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
-        return;
+async function editCharGroupTagsByValue(groupId, nextTagsRaw) {
+    const nextTags = parseTags(nextTagsRaw);
+    const result = await mutatePromptData('editCharGroupTags', { groupId: groupId, tags: nextTags });
+    if (!result.ok) {
+        return false;
     }
 
     const availableTags = collectCharTags();
@@ -31,7 +48,71 @@ async function editCharGroupTags(groupId) {
 
     renderCharTagFilters();
     renderTab('chars');
-    showToast('角色标签已更新');
+    showToast(result.message);
+    return true;
+}
+
+async function addCharTagByValue(groupId, nextTagRaw) {
+    const nextTag = String(nextTagRaw || '').trim();
+    if (!nextTag) {
+        showToast('标签不能为空');
+        return false;
+    }
+
+    const result = await mutatePromptData('addCharTag', { groupId: groupId, tag: nextTag });
+    if (!result.ok) {
+        return false;
+    }
+
+    renderCharTagFilters();
+    renderTab('chars');
+    showToast(result.message);
+    return true;
+}
+
+async function editCharTagByValue(groupId, oldTag, nextTagRaw) {
+    const nextTag = String(nextTagRaw || '').trim();
+    if (!nextTag) {
+        showToast('标签不能为空');
+        return false;
+    }
+
+    const result = await mutatePromptData('editCharTag', {
+        groupId: groupId,
+        oldTag: oldTag,
+        nextTag: nextTag
+    });
+    if (!result.ok) {
+        return false;
+    }
+
+    activeCharTags = activeCharTags.map(function (tag) {
+        return tag === oldTag ? nextTag : tag;
+    });
+
+    renderCharTagFilters();
+    renderTab('chars');
+    showToast(result.message);
+    return true;
+}
+
+async function deleteCharTagByValue(groupId, oldTag) {
+    const result = await mutatePromptData('deleteCharTag', {
+        groupId: groupId,
+        tag: oldTag
+    });
+    if (!result.ok) {
+        return false;
+    }
+
+    activeCharTags = activeCharTags.filter(function (tag) {
+        return tag !== oldTag;
+    });
+
+    renderCharTagFilters();
+    renderTab('chars');
+    showToast(result.message);
+    return true;
 }
 
 async function renameCharGroup(groupId, oldTitle) {
@@ -39,37 +120,35 @@ async function renameCharGroup(groupId, oldTitle) {
     const targetGroup = groups.find(group => group.id === groupId);
     if (!targetGroup) {
         showToast('角色分组不存在');
-        return;
+        return false;
     }
 
     const nextTitleRaw = window.prompt('请输入新的角色名称：', oldTitle || targetGroup.title);
     if (nextTitleRaw === null) {
-        return;
+        return false;
     }
 
-    const nextTitle = nextTitleRaw.trim();
+    return renameCharGroupByValue(groupId, nextTitleRaw);
+}
+
+async function renameCharGroupByValue(groupId, nextTitleRaw) {
+    const nextTitle = String(nextTitleRaw || '').trim();
     if (!nextTitle) {
         showToast('角色名称不能为空');
-        return;
+        return false;
     }
 
-    const duplicated = groups.some(group => group.id !== groupId && group.title === nextTitle);
-    if (duplicated) {
-        showToast('角色名称已存在');
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    targetGroup.title = nextTitle;
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
-        return;
+    const result = await mutatePromptData('renameCharGroup', {
+        groupId: groupId,
+        title: nextTitle
+    });
+    if (!result.ok) {
+        return false;
     }
 
     renderTab('chars');
-    showToast('角色名称已更新');
+    showToast(result.message);
+    return true;
 }
 
 async function deleteCharGroup(groupId, groupTitle) {
@@ -89,12 +168,8 @@ async function deleteCharGroup(groupId, groupTitle) {
         return;
     }
 
-    const backup = deepClone(promptData);
-    promptData.chars = groups.filter(group => group.id !== groupId);
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    const result = await mutatePromptData('deleteCharGroup', { groupId: groupId });
+    if (!result.ok) {
         return;
     }
 
@@ -106,7 +181,7 @@ async function deleteCharGroup(groupId, groupTitle) {
     }
 
     renderTab('chars');
-    showToast('角色已删除');
+    showToast(result.message);
 }
 
 async function deleteItem(tabId, groupId, itemId, itemName) {
@@ -118,24 +193,12 @@ async function deleteItem(tabId, groupId, itemId, itemName) {
         return;
     }
 
-    const groups = promptData[tabId] || [];
-    const targetGroup = groups.find(group => group.id === groupId);
-    if (!targetGroup) {
-        showToast('未找到所属分组');
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    const beforeCount = targetGroup.items.length;
-    targetGroup.items = targetGroup.items.filter(item => item.id !== itemId);
-    if (beforeCount === targetGroup.items.length) {
-        showToast('条目不存在，无法删除');
-        return;
-    }
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    const result = await mutatePromptData('deleteItem', {
+        tabId: tabId,
+        groupId: groupId,
+        itemId: itemId
+    });
+    if (!result.ok) {
         return;
     }
 
@@ -144,7 +207,7 @@ async function deleteItem(tabId, groupId, itemId, itemName) {
     }
 
     renderTab(tabId);
-    showToast('条目已删除');
+    showToast(result.message);
 }
 
 async function saveInlineEditedItem(itemNode, formNode) {
@@ -162,35 +225,21 @@ async function saveInlineEditedItem(itemNode, formNode) {
         return;
     }
 
-    const groups = promptData[tabId] || [];
-    const targetGroup = groups.find(group => group.id === groupId);
-    let targetItem = null;
-    if (tabId === 'outfit') {
-        const categoryItems = targetGroup && Array.isArray(targetGroup[categoryKey]) ? targetGroup[categoryKey] : [];
-        targetItem = categoryItems.find(item => item.id === itemId);
-    } else {
-        targetItem = targetGroup ? targetGroup.items.find(item => item.id === itemId) : null;
-    }
-    if (!targetGroup || !targetItem) {
-        showToast('条目不存在，可能已被删除');
-        editState = null;
-        renderTab(tabId);
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    targetItem.name = name;
-    targetItem.prompt = prompt;
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    const result = await mutatePromptData('saveItem', {
+        tabId: tabId,
+        groupId: groupId,
+        itemId: itemId,
+        categoryKey: categoryKey,
+        name: name,
+        prompt: prompt
+    });
+    if (!result.ok) {
         return;
     }
 
     editState = null;
     renderTab(tabId);
-    showToast('提示词已更新');
+    showToast(result.message);
 }
 
 async function saveInlineAddedItem(formNode) {
@@ -207,44 +256,20 @@ async function saveInlineAddedItem(formNode) {
         return;
     }
 
-    const groups = promptData[tabId] || [];
-    const targetGroup = groups.find(group => group.id === groupId);
-    if (!targetGroup) {
-        showToast('未找到分组');
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    if (tabId === 'outfit') {
-        if (OUTFIT_CATEGORY_KEYS.indexOf(categoryKey) === -1) {
-            showToast('服装分类无效');
-            return;
-        }
-        if (!Array.isArray(targetGroup[categoryKey])) {
-            targetGroup[categoryKey] = [];
-        }
-        targetGroup[categoryKey].unshift({
-            id: newId(),
-            name: name,
-            prompt: prompt
-        });
-    } else {
-        targetGroup.items.unshift({
-            id: newId(),
-            name: name,
-            prompt: prompt
-        });
-    }
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    const result = await mutatePromptData('addItem', {
+        tabId: tabId,
+        groupId: groupId,
+        categoryKey: categoryKey,
+        name: name,
+        prompt: prompt
+    });
+    if (!result.ok) {
         return;
     }
 
     addState = null;
     renderTab(tabId);
-    showToast('已新增提示词条目');
+    showToast(result.message);
 }
 
 function startEdit(tabId, groupId, itemId, categoryKey) {
@@ -257,8 +282,7 @@ function startEdit(tabId, groupId, itemId, categoryKey) {
     const group = (promptData[tabId] || []).find(g => g.id === groupId);
     let item = null;
     if (tabId === 'outfit') {
-        const key = resolvedCategoryKey;
-        const categoryItems = group && Array.isArray(group[key]) ? group[key] : [];
+        const categoryItems = group && Array.isArray(group[resolvedCategoryKey]) ? group[resolvedCategoryKey] : [];
         item = categoryItems.find(i => i.id === itemId) || null;
     } else {
         item = group ? group.items.find(i => i.id === itemId) : null;
@@ -272,6 +296,7 @@ function startEdit(tabId, groupId, itemId, categoryKey) {
     if (tabId !== activeTab) {
         switchToTab(tabId);
     }
+
     editState = { tabId: tabId, groupId: groupId, itemId: itemId, categoryKey: resolvedCategoryKey };
     addState = null;
     renderTab(tabId);
@@ -294,39 +319,20 @@ async function addOutfitGroup() {
     const title = outfitGroupTitleInput ? outfitGroupTitleInput.value.trim() : '';
     if (!title) {
         showToast('请输入服装风格名称');
-        return;
+        return false;
     }
 
-    const existed = (promptData.outfit || []).some(function (group) {
-        return group.title === title;
-    });
-    if (existed) {
-        showToast('该服装风格已存在');
-        return;
+    const result = await mutatePromptData('addOutfitGroup', { title: title });
+    if (!result.ok) {
+        return false;
     }
 
-    const backup = deepClone(promptData);
-    promptData.outfit.unshift({
-        id: newId(),
-        title: title,
-        tops: [],
-        bottoms: [],
-        shoes: [],
-        headwear: [],
-        accessories: [],
-        weapons: [],
-        others: []
-    });
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
-        return;
+    if (outfitGroupTitleInput) {
+        outfitGroupTitleInput.value = '';
     }
-
-    outfitGroupTitleInput.value = '';
     renderTab('outfit');
-    showToast('已新增服装风格');
+    showToast(result.message);
+    return true;
 }
 
 async function renameOutfitGroup(groupId, oldTitle) {
@@ -350,25 +356,16 @@ async function renameOutfitGroup(groupId, oldTitle) {
         return;
     }
 
-    const duplicated = groups.some(function (group) {
-        return group.id !== groupId && group.title === nextTitle;
+    const result = await mutatePromptData('renameOutfitGroup', {
+        groupId: groupId,
+        title: nextTitle
     });
-    if (duplicated) {
-        showToast('风格名称已存在');
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    targetGroup.title = nextTitle;
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    if (!result.ok) {
         return;
     }
 
     renderTab('outfit');
-    showToast('风格名称已更新');
+    showToast(result.message);
 }
 
 async function deleteOutfitGroup(groupId, groupTitle) {
@@ -385,14 +382,8 @@ async function deleteOutfitGroup(groupId, groupTitle) {
         return;
     }
 
-    const backup = deepClone(promptData);
-    promptData.outfit = groups.filter(function (group) {
-        return group.id !== groupId;
-    });
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    const result = await mutatePromptData('deleteOutfitGroup', { groupId: groupId });
+    if (!result.ok) {
         return;
     }
 
@@ -404,7 +395,7 @@ async function deleteOutfitGroup(groupId, groupTitle) {
     }
 
     renderTab('outfit');
-    showToast('服装风格已删除');
+    showToast(result.message);
 }
 
 async function deleteOutfitItem(groupId, categoryKey, itemId, itemName) {
@@ -417,28 +408,12 @@ async function deleteOutfitItem(groupId, categoryKey, itemId, itemName) {
         return;
     }
 
-    const groups = promptData.outfit || [];
-    const targetGroup = groups.find(function (group) {
-        return group.id === groupId;
+    const result = await mutatePromptData('deleteOutfitItem', {
+        groupId: groupId,
+        categoryKey: categoryKey,
+        itemId: itemId
     });
-    if (!targetGroup || !Array.isArray(targetGroup[categoryKey])) {
-        showToast('未找到所属风格或分类');
-        return;
-    }
-
-    const backup = deepClone(promptData);
-    const beforeCount = targetGroup[categoryKey].length;
-    targetGroup[categoryKey] = targetGroup[categoryKey].filter(function (item) {
-        return item.id !== itemId;
-    });
-    if (beforeCount === targetGroup[categoryKey].length) {
-        showToast('条目不存在，无法删除');
-        return;
-    }
-
-    const saved = await savePromptData();
-    if (!saved) {
-        promptData = backup;
+    if (!result.ok) {
         return;
     }
 
@@ -447,7 +422,7 @@ async function deleteOutfitItem(groupId, categoryKey, itemId, itemName) {
     }
 
     renderTab('outfit');
-    showToast('条目已删除');
+    showToast(result.message);
 }
 
 function copyPrompt(text) {
@@ -463,11 +438,11 @@ function copyPrompt(text) {
 }
 
 function fallbackCopyTextToClipboard(text) {
-    var textArea = document.createElement("textarea");
+    var textArea = document.createElement('textarea');
     textArea.value = text;
-    textArea.style.top = "0";
-    textArea.style.left = "0";
-    textArea.style.position = "fixed";
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.position = 'fixed';
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();

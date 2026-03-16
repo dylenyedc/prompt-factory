@@ -31,13 +31,13 @@ function renderTab(tabId) {
         const content = itemsHtml || '<div class="hint-text">当前分组还没有提示词，使用上方表单新增。</div>';
         const commonAddBtn = '<button class="copy-btn" data-action="add-item-start" data-tab-id="' + tabId + '" data-group-id="' + group.id + '">新增提示词</button>';
         const groupManageBtns = tabId === 'chars'
-            ? '<button class="copy-btn secondary-btn" data-action="edit-tags" data-group-id="' + group.id + '">编辑标签</button><button class="copy-btn secondary-btn" data-action="rename-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '">编辑角色名</button><button class="copy-btn danger-btn" data-action="delete-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '">删除角色</button>'
+            ? '<div class="group-settings-wrap"><button class="settings-icon-btn" data-action="open-char-settings-modal" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '" aria-label="打开角色设置">⚙</button></div>'
             : '';
         const groupActionHtml = '<div class="group-actions">' + commonAddBtn + groupManageBtns + '</div>';
         const addFormHtml = (addState && addState.tabId === tabId && addState.groupId === group.id)
             ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"><input class="inline-item-name" type="text" placeholder="输入条目名称" /><textarea class="inline-item-prompt" placeholder="输入完整提示词"></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save">保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
             : '';
-        const tagsHtml = tabId === 'chars' ? renderCardTags(group.tags || []) : '';
+        const tagsHtml = tabId === 'chars' ? renderCardTags(group.id, group.tags || []) : '';
 
         return '\n                    <div class="card">\n                        <div class="card-header">\n                            <div class="card-title">' + escapeHtml(group.title) + '</div>\n                            ' + groupActionHtml + '\n                        </div>\n                        ' + tagsHtml + '\n                        ' + content + '\n                        ' + addFormHtml + '\n                    </div>\n                ';
     }).join('');
@@ -269,17 +269,27 @@ function getVisibleCharGroups(groups) {
     });
 }
 
-function renderCardTags(tags) {
-    if (!tags.length) {
-        return '<div class="hint-text" style="margin-bottom: 12px;">标签：未设置</div>';
-    }
-
+function renderCardTags(groupId, tags) {
     const chips = tags.map(function (tag) {
         const meta = parseTagMeta(tag);
         const label = meta.label;
-        return '<span class="card-tag">' + escapeHtml(label) + '</span>';
+        const isEditing = !!activeCharTagEditor
+            && activeCharTagEditor.groupId === groupId
+            && activeCharTagEditor.oldTag === tag;
+
+        if (isEditing) {
+            return '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="' + escapeAttr(tag) + '" value="' + escapeAttr(activeCharTagEditor.value || '') + '" /><button class="char-tag-delete-x" data-action="delete-char-tag-inline" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '" aria-label="删除标签">×</button></div>';
+        }
+
+        return '<button class="card-tag card-tag-btn" data-action="start-char-tag-edit" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '">' + escapeHtml(label) + '</button>';
     }).join('');
-    return '<div class="card-tags">' + chips + '</div>';
+
+    const isAdding = !!activeCharTagEditor && activeCharTagEditor.groupId === groupId && activeCharTagEditor.isNew;
+    const addEditor = isAdding
+        ? '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="" value="' + escapeAttr(activeCharTagEditor.value || '') + '" placeholder="输入新标签" /></div>'
+        : '';
+    const addBtn = '<button class="card-tag card-tag-btn add-tag-btn" data-action="start-char-tag-add" data-group-id="' + escapeAttr(groupId) + '" aria-label="新增标签">+</button>';
+    return '<div class="card-tags">' + chips + addEditor + addBtn + '</div>';
 }
 
 function switchToTab(tabId, element) {

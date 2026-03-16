@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "SD-OutfitHub - 本地 Stable Diffusion 服装提示词管理与检索工具",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
   "scripts": {
     "start": "node server.js"
   }
