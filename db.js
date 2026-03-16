@@ -92,10 +92,12 @@ function openDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
       password_hash TEXT NOT NULL,
       provider TEXT NOT NULL DEFAULT 'local',
       provider_user_id TEXT NOT NULL DEFAULT '',
       avatar_url TEXT NOT NULL DEFAULT '',
+      is_admin INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
 
@@ -151,7 +153,9 @@ function openDatabase() {
   ensureColumn(db, 'prompts', 'owner_user_id', "owner_user_id TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'users', 'provider', "provider TEXT NOT NULL DEFAULT 'local'");
   ensureColumn(db, 'users', 'provider_user_id', "provider_user_id TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'users', 'display_name', "display_name TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'users', 'avatar_url', "avatar_url TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'users', 'is_admin', 'is_admin INTEGER NOT NULL DEFAULT 0');
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_provider_external ON users(provider, provider_user_id);
@@ -253,14 +257,66 @@ function safeParseTagsJson(tagsJson) {
   }
 }
 
-function getPromptData(db, ownerUserId) {
-  const owner = String(ownerUserId || '').trim();
+function resolveUploaderName(ownerUserId, uploader) {
+  if (uploader) {
+    return uploader;
+  }
+  return ownerUserId ? '未知用户' : '匿名用户';
+}
 
-  const characters = db.prepare('SELECT id, title, tags_json FROM characters WHERE owner_user_id = ? ORDER BY rowid ASC').all(owner);
-  const actionsGroups = db.prepare("SELECT id, title FROM prompt_groups WHERE owner_user_id = ? AND section = 'actions' ORDER BY rowid ASC").all(owner);
-  const envGroups = db.prepare("SELECT id, title FROM prompt_groups WHERE owner_user_id = ? AND section = 'env' ORDER BY rowid ASC").all(owner);
-  const outfits = db.prepare('SELECT id, title FROM outfits WHERE owner_user_id = ? ORDER BY rowid ASC').all(owner);
-  const prompts = db.prepare('SELECT id, section, group_id, category_key, name, prompt FROM prompts WHERE owner_user_id = ? ORDER BY rowid ASC').all(owner);
+function resolveUploaderAvatar(avatarUrl) {
+  return String(avatarUrl || '').trim();
+}
+
+function getPromptData(db, ownerUserId, options = {}) {
+  const owner = String(ownerUserId || '').trim();
+  const includeAllOwners = !!options.includeAllOwners;
+  const includeUploader = !!options.includeUploader;
+  const ownerFilterSql = includeAllOwners ? '' : ' WHERE %TABLE%.owner_user_id = ?';
+  const ownerParams = includeAllOwners ? [] : [owner];
+  const uploaderSelect = includeUploader
+    ? ", COALESCE(NULLIF(users.display_name, ''), users.username, '') AS uploader, COALESCE(users.avatar_url, '') AS uploader_avatar_url"
+    : '';
+
+  const characters = db.prepare(
+    `SELECT characters.id, characters.owner_user_id, characters.title, characters.tags_json${uploaderSelect}
+     FROM characters
+     LEFT JOIN users ON users.id = characters.owner_user_id
+     ${ownerFilterSql.replace('%TABLE%', 'characters')}
+     ORDER BY characters.rowid ASC`
+  ).all(...ownerParams);
+
+  const actionsGroups = db.prepare(
+    `SELECT prompt_groups.id, prompt_groups.owner_user_id, prompt_groups.title${uploaderSelect}
+     FROM prompt_groups
+     LEFT JOIN users ON users.id = prompt_groups.owner_user_id
+     ${ownerFilterSql.replace('%TABLE%', 'prompt_groups')}${includeAllOwners ? " WHERE prompt_groups.section = 'actions'" : " AND prompt_groups.section = 'actions'"}
+     ORDER BY prompt_groups.rowid ASC`
+  ).all(...ownerParams);
+
+  const envGroups = db.prepare(
+    `SELECT prompt_groups.id, prompt_groups.owner_user_id, prompt_groups.title${uploaderSelect}
+     FROM prompt_groups
+     LEFT JOIN users ON users.id = prompt_groups.owner_user_id
+     ${ownerFilterSql.replace('%TABLE%', 'prompt_groups')}${includeAllOwners ? " WHERE prompt_groups.section = 'env'" : " AND prompt_groups.section = 'env'"}
+     ORDER BY prompt_groups.rowid ASC`
+  ).all(...ownerParams);
+
+  const outfits = db.prepare(
+    `SELECT outfits.id, outfits.owner_user_id, outfits.title${uploaderSelect}
+     FROM outfits
+     LEFT JOIN users ON users.id = outfits.owner_user_id
+     ${ownerFilterSql.replace('%TABLE%', 'outfits')}
+     ORDER BY outfits.rowid ASC`
+  ).all(...ownerParams);
+
+  const prompts = db.prepare(
+    `SELECT prompts.id, prompts.owner_user_id, prompts.section, prompts.group_id, prompts.category_key, prompts.name, prompts.prompt${uploaderSelect}
+     FROM prompts
+     LEFT JOIN users ON users.id = prompts.owner_user_id
+     ${ownerFilterSql.replace('%TABLE%', 'prompts')}
+     ORDER BY prompts.rowid ASC`
+  ).all(...ownerParams);
 
   const charsById = new Map();
   const actionsById = new Map();
@@ -268,31 +324,73 @@ function getPromptData(db, ownerUserId) {
   const outfitById = new Map();
 
   const chars = characters.map(row => {
-    const group = { id: row.id, title: row.title, tags: safeParseTagsJson(row.tags_json), items: [] };
+    const group = {
+      id: row.id,
+      ownerUserId: row.owner_user_id || '',
+      title: row.title,
+      tags: safeParseTagsJson(row.tags_json),
+      items: []
+    };
+    if (includeUploader) {
+      group.uploader = resolveUploaderName(group.ownerUserId, row.uploader);
+      group.uploaderAvatarUrl = resolveUploaderAvatar(row.uploader_avatar_url);
+    }
     charsById.set(row.id, group);
     return group;
   });
 
   const actions = actionsGroups.map(row => {
-    const group = { id: row.id, title: row.title, items: [] };
+    const group = { id: row.id, ownerUserId: row.owner_user_id || '', title: row.title, items: [] };
+    if (includeUploader) {
+      group.uploader = resolveUploaderName(group.ownerUserId, row.uploader);
+      group.uploaderAvatarUrl = resolveUploaderAvatar(row.uploader_avatar_url);
+    }
     actionsById.set(row.id, group);
     return group;
   });
 
   const env = envGroups.map(row => {
-    const group = { id: row.id, title: row.title, items: [] };
+    const group = { id: row.id, ownerUserId: row.owner_user_id || '', title: row.title, items: [] };
+    if (includeUploader) {
+      group.uploader = resolveUploaderName(group.ownerUserId, row.uploader);
+      group.uploaderAvatarUrl = resolveUploaderAvatar(row.uploader_avatar_url);
+    }
     envById.set(row.id, group);
     return group;
   });
 
   const outfit = outfits.map(row => {
-    const group = { id: row.id, title: row.title, tops: [], bottoms: [], shoes: [], headwear: [], accessories: [], weapons: [], others: [] };
+    const group = {
+      id: row.id,
+      ownerUserId: row.owner_user_id || '',
+      title: row.title,
+      tops: [],
+      bottoms: [],
+      shoes: [],
+      headwear: [],
+      accessories: [],
+      weapons: [],
+      others: []
+    };
+    if (includeUploader) {
+      group.uploader = resolveUploaderName(group.ownerUserId, row.uploader);
+      group.uploaderAvatarUrl = resolveUploaderAvatar(row.uploader_avatar_url);
+    }
     outfitById.set(row.id, group);
     return group;
   });
 
   prompts.forEach(row => {
-    const item = { id: row.id, name: row.name, prompt: row.prompt };
+    const item = {
+      id: row.id,
+      ownerUserId: row.owner_user_id || '',
+      name: row.name,
+      prompt: row.prompt
+    };
+    if (includeUploader) {
+      item.uploader = resolveUploaderName(item.ownerUserId, row.uploader);
+      item.uploaderAvatarUrl = resolveUploaderAvatar(row.uploader_avatar_url);
+    }
     if (row.section === 'chars') {
       const group = charsById.get(row.group_id);
       if (group) {

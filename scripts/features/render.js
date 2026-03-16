@@ -7,12 +7,29 @@ function renderAllTabs() {
     renderTab('outfit');
 }
 
-function getReadOnlyButtonAttr() {
-    return isReadOnlyMode ? ' disabled data-readonly="1" title="当前为只读模式，请先使用 GitHub 登录"' : '';
+function getManageDeniedReason(ownerUserId) {
+    if (isReadOnlyMode || !currentUserId) {
+        return '当前为只读模式，请先使用 GitHub 登录';
+    }
+    if (isAdminUser) {
+        return '';
+    }
+    return String(ownerUserId || '') === String(currentUserId || '')
+        ? ''
+        : '仅管理员可编辑或删除其他用户上传的数据';
 }
 
-function getReadOnlyInputAttr() {
-    return isReadOnlyMode ? ' disabled data-readonly="1"' : '';
+function getReadOnlyButtonAttr(ownerUserId) {
+    const deniedReason = getManageDeniedReason(ownerUserId);
+    if (!deniedReason) {
+        return '';
+    }
+    return ' disabled data-readonly="1" title="' + escapeAttr(deniedReason) + '"';
+}
+
+function getReadOnlyInputAttr(ownerUserId) {
+    const deniedReason = getManageDeniedReason(ownerUserId);
+    return deniedReason ? ' disabled data-readonly="1"' : '';
 }
 
 function renderTab(tabId) {
@@ -27,10 +44,12 @@ function renderTab(tabId) {
     const visibleGroups = tabId === 'chars' ? getVisibleCharGroups(groups) : groups;
 
     listNode.innerHTML = visibleGroups.map(group => {
+        const groupOwnerUserId = group.ownerUserId || '';
         const itemsHtml = group.items.map(item => {
             const isEditing = !!editState && editState.tabId === tabId && editState.groupId === group.id && editState.itemId === item.id;
-            const readOnlyButtonAttr = getReadOnlyButtonAttr();
-            const readOnlyInputAttr = getReadOnlyInputAttr();
+            const itemOwnerUserId = item.ownerUserId || groupOwnerUserId;
+            const readOnlyButtonAttr = getReadOnlyButtonAttr(itemOwnerUserId);
+            const readOnlyInputAttr = getReadOnlyInputAttr(itemOwnerUserId);
             const previewHtml = isEditing
                 ? '<div class="preview-box active"><div class="inline-item-form" data-inline-form="edit"><input class="inline-item-name" type="text" value="' + escapeAttr(item.name) + '" placeholder="条目名称"' + readOnlyInputAttr + ' /><textarea class="inline-item-prompt" placeholder="提示词内容"' + readOnlyInputAttr + '>' + escapeHtml(item.prompt) + '</textarea><div class="form-actions"><button class="copy-btn" data-action="edit-inline-save"' + readOnlyButtonAttr + '>保存</button><button class="copy-btn secondary-btn" data-action="edit-inline-cancel">取消</button></div></div></div>'
                 : '<div class="preview-box">' + escapeHtml(item.prompt) + '</div>';
@@ -39,17 +58,25 @@ function renderTab(tabId) {
         }).join('');
 
         const content = itemsHtml || '<div class="hint-text">当前分组还没有提示词，使用上方表单新增。</div>';
-        const commonAddBtn = '<button class="copy-btn" data-action="add-item-start" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"' + getReadOnlyButtonAttr() + '>新增提示词</button>';
+        const groupReadOnlyButtonAttr = getReadOnlyButtonAttr(groupOwnerUserId);
+        const groupReadOnlyInputAttr = getReadOnlyInputAttr(groupOwnerUserId);
+        const commonAddBtn = '<button class="copy-btn" data-action="add-item-start" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"' + groupReadOnlyButtonAttr + '>新增提示词</button>';
         const groupManageBtns = tabId === 'chars'
-            ? '<div class="group-settings-wrap"><button class="settings-icon-btn" data-action="open-char-settings-modal" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '" aria-label="打开角色设置"' + getReadOnlyButtonAttr() + '>⚙</button></div>'
+            ? '<div class="group-settings-wrap"><button class="settings-icon-btn" data-action="open-char-settings-modal" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '" aria-label="打开角色设置"' + groupReadOnlyButtonAttr + '>⚙</button></div>'
             : '';
         const groupActionHtml = '<div class="group-actions">' + commonAddBtn + groupManageBtns + '</div>';
         const addFormHtml = (addState && addState.tabId === tabId && addState.groupId === group.id)
-            ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"><input class="inline-item-name" type="text" placeholder="输入条目名称"' + getReadOnlyInputAttr() + ' /><textarea class="inline-item-prompt" placeholder="输入完整提示词"' + getReadOnlyInputAttr() + '></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save"' + getReadOnlyButtonAttr() + '>保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
+            ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="' + tabId + '" data-group-id="' + group.id + '"><input class="inline-item-name" type="text" placeholder="输入条目名称"' + groupReadOnlyInputAttr + ' /><textarea class="inline-item-prompt" placeholder="输入完整提示词"' + groupReadOnlyInputAttr + '></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save"' + groupReadOnlyButtonAttr + '>保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
             : '';
-        const tagsHtml = tabId === 'chars' ? renderCardTags(group.id, group.tags || []) : '';
+        const tagsHtml = tabId === 'chars' ? renderCardTags(group.id, group.tags || [], groupOwnerUserId) : '';
+        const uploaderHtml = tabId === 'chars'
+            ? '<div class="uploader-meta"><span class="hint-text">上传者：</span>'
+                + '<span class="uploader-avatar-fallback">' + escapeHtml(String(group.uploader || '匿').slice(0, 1).toUpperCase()) + '</span>'
+                + '<span class="uploader-name">' + escapeHtml(group.uploader || '匿名用户') + '</span></div>'
+            : '';
+        const titleHtml = '<div><div class="card-title">' + escapeHtml(group.title) + '</div>' + uploaderHtml + '</div>';
 
-        return '\n                    <div class="card">\n                        <div class="card-header">\n                            <div class="card-title">' + escapeHtml(group.title) + '</div>\n                            ' + groupActionHtml + '\n                        </div>\n                        ' + tagsHtml + '\n                        ' + content + '\n                        ' + addFormHtml + '\n                    </div>\n                ';
+        return '\n                    <div class="card">\n                        <div class="card-header">\n                            ' + titleHtml + '\n                            ' + groupActionHtml + '\n                        </div>\n                        ' + tagsHtml + '\n                        ' + content + '\n                        ' + addFormHtml + '\n                    </div>\n                ';
     }).join('');
 
     if (!groups.length) {
@@ -66,6 +93,9 @@ function renderOutfitTab(listNode, groups) {
     const visibleCategoryKeys = getVisibleOutfitCategoryKeys();
 
     listNode.innerHTML = groups.map(function (group) {
+        const groupOwnerUserId = group.ownerUserId || '';
+        const groupReadOnlyButtonAttr = getReadOnlyButtonAttr(groupOwnerUserId);
+        const groupReadOnlyInputAttr = getReadOnlyInputAttr(groupOwnerUserId);
         const categoryBlocks = visibleCategoryKeys.map(function (categoryKey) {
             const items = Array.isArray(group[categoryKey]) ? group[categoryKey] : [];
             const itemsHtml = items.map(function (item) {
@@ -74,8 +104,9 @@ function renderOutfitTab(listNode, groups) {
                     && editState.groupId === group.id
                     && editState.itemId === item.id
                     && editState.categoryKey === categoryKey;
-                const readOnlyButtonAttr = getReadOnlyButtonAttr();
-                const readOnlyInputAttr = getReadOnlyInputAttr();
+                const itemOwnerUserId = item.ownerUserId || groupOwnerUserId;
+                const readOnlyButtonAttr = getReadOnlyButtonAttr(itemOwnerUserId);
+                const readOnlyInputAttr = getReadOnlyInputAttr(itemOwnerUserId);
                 const previewHtml = isEditing
                     ? '<div class="preview-box active"><div class="inline-item-form" data-inline-form="edit"><input class="inline-item-name" type="text" value="' + escapeAttr(item.name) + '" placeholder="条目名称"' + readOnlyInputAttr + ' /><textarea class="inline-item-prompt" placeholder="提示词内容"' + readOnlyInputAttr + '>' + escapeHtml(item.prompt) + '</textarea><div class="form-actions"><button class="copy-btn" data-action="edit-inline-save"' + readOnlyButtonAttr + '>保存</button><button class="copy-btn secondary-btn" data-action="edit-inline-cancel">取消</button></div></div></div>'
                     : '<div class="preview-box">' + escapeHtml(item.prompt) + '</div>';
@@ -87,13 +118,13 @@ function renderOutfitTab(listNode, groups) {
                 && addState.tabId === 'outfit'
                 && addState.groupId === group.id
                 && addState.categoryKey === categoryKey)
-                ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="outfit" data-group-id="' + group.id + '" data-category-key="' + categoryKey + '"><input class="inline-item-name" type="text" placeholder="输入条目名称"' + getReadOnlyInputAttr() + ' /><textarea class="inline-item-prompt" placeholder="输入完整提示词"' + getReadOnlyInputAttr() + '></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save"' + getReadOnlyButtonAttr() + '>保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
+                ? '<div class="inline-item-form" data-inline-form="add" data-tab-id="outfit" data-group-id="' + group.id + '" data-category-key="' + categoryKey + '"><input class="inline-item-name" type="text" placeholder="输入条目名称"' + groupReadOnlyInputAttr + ' /><textarea class="inline-item-prompt" placeholder="输入完整提示词"' + groupReadOnlyInputAttr + '></textarea><div class="form-actions"><button class="copy-btn" data-action="add-item-save"' + groupReadOnlyButtonAttr + '>保存新增</button><button class="copy-btn secondary-btn" data-action="add-item-cancel">取消</button></div></div>'
                 : '';
 
-            return '\n                <div class="outfit-section">\n                    <div class="outfit-section-title">' + OUTFIT_CATEGORY_LABELS[categoryKey] + '</div>\n                    ' + (itemsHtml || '<div class="hint-text">当前分类暂无提示词。</div>') + '\n                    <div class="group-actions"><button class="copy-btn" data-action="add-outfit-item-start" data-tab-id="outfit" data-group-id="' + group.id + '" data-category-key="' + categoryKey + '"' + getReadOnlyButtonAttr() + '>新增' + OUTFIT_CATEGORY_LABELS[categoryKey] + '</button></div>\n                    ' + addFormHtml + '\n                </div>\n            ';
+            return '\n                <div class="outfit-section">\n                    <div class="outfit-section-title">' + OUTFIT_CATEGORY_LABELS[categoryKey] + '</div>\n                    ' + (itemsHtml || '<div class="hint-text">当前分类暂无提示词。</div>') + '\n                    <div class="group-actions"><button class="copy-btn" data-action="add-outfit-item-start" data-tab-id="outfit" data-group-id="' + group.id + '" data-category-key="' + categoryKey + '"' + groupReadOnlyButtonAttr + '>新增' + OUTFIT_CATEGORY_LABELS[categoryKey] + '</button></div>\n                    ' + addFormHtml + '\n                </div>\n            ';
         }).join('');
 
-        return '\n            <div class="card">\n                <div class="card-header">\n                    <div class="card-title">' + escapeHtml(group.title) + '</div>\n                    <div class="group-actions">\n                        <button class="copy-btn secondary-btn" data-action="rename-outfit-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '"' + getReadOnlyButtonAttr() + '>编辑风格名</button>\n                        <button class="copy-btn danger-btn" data-action="delete-outfit-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '"' + getReadOnlyButtonAttr() + '>删除风格</button>\n                    </div>\n                </div>\n                ' + categoryBlocks + '\n            </div>\n        ';
+        return '\n            <div class="card">\n                <div class="card-header">\n                    <div class="card-title">' + escapeHtml(group.title) + '</div>\n                    <div class="group-actions">\n                        <button class="copy-btn secondary-btn" data-action="rename-outfit-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '"' + groupReadOnlyButtonAttr + '>编辑风格名</button>\n                        <button class="copy-btn danger-btn" data-action="delete-outfit-group" data-group-id="' + group.id + '" data-group-title="' + escapeAttr(group.title) + '"' + groupReadOnlyButtonAttr + '>删除风格</button>\n                    </div>\n                </div>\n                ' + categoryBlocks + '\n            </div>\n        ';
     }).join('');
 
     if (!groups.length) {
@@ -281,7 +312,9 @@ function getVisibleCharGroups(groups) {
     });
 }
 
-function renderCardTags(groupId, tags) {
+function renderCardTags(groupId, tags, ownerUserId) {
+    const readOnlyButtonAttr = getReadOnlyButtonAttr(ownerUserId);
+    const readOnlyInputAttr = getReadOnlyInputAttr(ownerUserId);
     const chips = tags.map(function (tag) {
         const meta = parseTagMeta(tag);
         const label = meta.label;
@@ -290,17 +323,17 @@ function renderCardTags(groupId, tags) {
             && activeCharTagEditor.oldTag === tag;
 
         if (isEditing) {
-            return '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="' + escapeAttr(tag) + '" value="' + escapeAttr(activeCharTagEditor.value || '') + '"' + getReadOnlyInputAttr() + ' /><button class="char-tag-delete-x" data-action="delete-char-tag-inline" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '" aria-label="删除标签"' + getReadOnlyButtonAttr() + '>×</button></div>';
+            return '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="' + escapeAttr(tag) + '" value="' + escapeAttr(activeCharTagEditor.value || '') + '"' + readOnlyInputAttr + ' /><button class="char-tag-delete-x" data-action="delete-char-tag-inline" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '" aria-label="删除标签"' + readOnlyButtonAttr + '>×</button></div>';
         }
 
-        return '<button class="card-tag card-tag-btn" data-action="start-char-tag-edit" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '"' + getReadOnlyButtonAttr() + '>' + escapeHtml(label) + '</button>';
+        return '<button class="card-tag card-tag-btn" data-action="start-char-tag-edit" data-group-id="' + escapeAttr(groupId) + '" data-tag="' + escapeAttr(tag) + '"' + readOnlyButtonAttr + '>' + escapeHtml(label) + '</button>';
     }).join('');
 
     const isAdding = !!activeCharTagEditor && activeCharTagEditor.groupId === groupId && activeCharTagEditor.isNew;
     const addEditor = isAdding
-        ? '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="" value="' + escapeAttr(activeCharTagEditor.value || '') + '" placeholder="输入新标签"' + getReadOnlyInputAttr() + ' /></div>'
+        ? '<div class="char-tag-edit-wrap"><input class="card-tag card-tag-edit-input" data-action="char-tag-edit-input" data-group-id="' + escapeAttr(groupId) + '" data-old-tag="" value="' + escapeAttr(activeCharTagEditor.value || '') + '" placeholder="输入新标签"' + readOnlyInputAttr + ' /></div>'
         : '';
-    const addBtn = '<button class="card-tag card-tag-btn add-tag-btn" data-action="start-char-tag-add" data-group-id="' + escapeAttr(groupId) + '" aria-label="新增标签"' + getReadOnlyButtonAttr() + '>+</button>';
+    const addBtn = '<button class="card-tag card-tag-btn add-tag-btn" data-action="start-char-tag-add" data-group-id="' + escapeAttr(groupId) + '" aria-label="新增标签"' + readOnlyButtonAttr + '>+</button>';
     return '<div class="card-tags">' + chips + addEditor + addBtn + '</div>';
 }
 

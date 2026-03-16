@@ -1,7 +1,9 @@
 async function init() {
     consumeAuthTokensFromUrlHash();
     initAuthUI();
+    bindImportEvents();
     promptData = await loadPromptData();
+    await loadMyProfile();
     renderAllTabs();
     bindListEvents();
     bindGroupEvents();
@@ -16,20 +18,100 @@ async function init() {
     }
 }
 
+function bindImportEvents() {
+    const importBtn = document.getElementById('import-prompts-btn');
+    const importInput = document.getElementById('import-prompts-file');
+    if (!importBtn || !importInput) {
+        return;
+    }
+
+    importBtn.addEventListener('click', function () {
+        if (isReadOnlyMode || !hasAuthSession()) {
+            showToast('当前为只读模式，请先登录');
+            return;
+        }
+        if (!isAdminUser) {
+            showToast('仅管理员可执行批量导入');
+            return;
+        }
+        importInput.value = '';
+        importInput.click();
+    });
+
+    importInput.addEventListener('change', async function () {
+        const file = importInput.files && importInput.files[0] ? importInput.files[0] : null;
+        if (!file) {
+            return;
+        }
+
+        const confirmed = window.confirm('导入将覆盖当前账号下的全部提示词数据，是否继续？');
+        if (!confirmed) {
+            importInput.value = '';
+            return;
+        }
+
+        const result = await importPromptDataFromJsonFile(file);
+        importInput.value = '';
+        if (!result || !result.ok) {
+            return;
+        }
+
+        renderAllTabs();
+    });
+}
+
 function initAuthUI() {
     const status = document.getElementById('auth-status-text');
+    const profilePreview = document.getElementById('profile-preview');
+    const profileNicknameInput = document.getElementById('profile-nickname-input');
+    const profileSaveBtn = document.getElementById('profile-save-btn');
+
     const loginBtn = document.getElementById('github-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const exportBtn = document.getElementById('export-prompts-btn');
+    const activateBtn = document.getElementById('admin-activate-btn');
+    const activationCodeInput = document.getElementById('admin-activation-code-input');
+
+    function getCurrentDisplayName() {
+        const nickname = String(currentNickname || '').trim();
+        const username = String(currentUsername || '').trim();
+        return nickname || username || '未登录用户';
+    }
+
+    function renderProfilePreview() {
+        if (!profilePreview) {
+            return;
+        }
+
+        const displayName = getCurrentDisplayName();
+        const accountText = hasAuthSession() && !isReadOnlyMode
+            ? ('账号：' + escapeHtml(currentUsername || currentUserId || '已登录'))
+            : '当前未登录';
+        const avatarHtml = '<div class="profile-avatar fallback">' + escapeHtml(displayName.slice(0, 1).toUpperCase()) + '</div>';
+        profilePreview.innerHTML = '<div class="profile-preview-inner">' + avatarHtml + '<div><div class="profile-name">' + escapeHtml(displayName) + '</div><div class="hint-text">' + accountText + '</div></div></div>';
+    }
+
+    function syncProfileForm() {
+        if (profileNicknameInput) {
+            profileNicknameInput.value = currentNickname || currentUsername || '';
+        }
+    }
+
     const updateStatus = function () {
         if (!status) {
             return;
         }
         if (hasAuthSession() && !isReadOnlyMode) {
-            status.textContent = '当前已登录（GitHub，可编辑）';
+            status.textContent = isAdminUser
+                ? '当前已登录（GitHub，管理员，可编辑）'
+                : '当前已登录（GitHub，普通用户，可编辑）';
+            renderProfilePreview();
+            syncProfileForm();
             return;
         }
         status.textContent = '当前未登录（只读模式）';
+        renderProfilePreview();
+        syncProfileForm();
     };
 
     updateStatus();
@@ -52,9 +134,48 @@ function initAuthUI() {
         });
     }
 
+    if (profileSaveBtn) {
+        profileSaveBtn.addEventListener('click', async function () {
+            if (isReadOnlyMode || !hasAuthSession()) {
+                showToast('请先登录后再修改个人资料');
+                return;
+            }
+
+            const result = await updateMyProfile({
+                nickname: profileNicknameInput ? profileNicknameInput.value : ''
+            });
+            if (!result || !result.ok) {
+                return;
+            }
+
+            renderProfilePreview();
+            updateReadOnlyUI();
+            promptData = await loadPromptData();
+            renderAllTabs();
+        });
+    }
+
     if (exportBtn) {
         exportBtn.addEventListener('click', async function () {
             await downloadPromptDataExport();
+        });
+    }
+
+    if (activateBtn && activationCodeInput) {
+        activateBtn.addEventListener('click', async function () {
+            const result = await activateAdminWithCode(activationCodeInput.value || '');
+            if (!result.ok) {
+                return;
+            }
+            activationCodeInput.value = '';
+            updateReadOnlyUI();
+        });
+
+        activationCodeInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                activateBtn.click();
+            }
         });
     }
 
@@ -78,7 +199,9 @@ function initAuthUI() {
             'char-settings-delete-btn',
             'char-settings-editor-input',
             'char-settings-editor-textarea',
-            'char-settings-editor-save-btn'
+            'char-settings-editor-save-btn',
+            'profile-nickname-input',
+            'profile-save-btn'
         ].forEach(function (id) {
             const node = document.getElementById(id);
             if (node) {
@@ -86,7 +209,29 @@ function initAuthUI() {
             }
         });
 
+        const importBtn = document.getElementById('import-prompts-btn');
+        if (importBtn) {
+            importBtn.disabled = !!isReadOnlyMode || !isAdminUser;
+            if (isReadOnlyMode) {
+                importBtn.title = '当前为只读模式，请先登录';
+            } else if (!isAdminUser) {
+                importBtn.title = '仅管理员可执行批量导入';
+            } else {
+                importBtn.title = '';
+            }
+        }
+
+        const activateBtnNode = document.getElementById('admin-activate-btn');
+        const activateInputNode = document.getElementById('admin-activation-code-input');
+        if (activateBtnNode) {
+            activateBtnNode.disabled = !!isReadOnlyMode || isAdminUser;
+        }
+        if (activateInputNode) {
+            activateInputNode.disabled = !!isReadOnlyMode || isAdminUser;
+        }
+
         updateStatus();
+        renderProfilePreview();
     };
 }
 

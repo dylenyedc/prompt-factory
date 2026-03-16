@@ -155,11 +155,27 @@
         <div class="container active">
             <div class="card">
                 <div id="auth-status-text" class="hint-text" style="margin-bottom: 10px;">当前未登录</div>
+                <div class="profile-edit-wrap" style="margin-bottom: 12px;">
+                    <div id="profile-preview" class="profile-preview"></div>
+                    <div class="inline-add" style="margin-top: 8px; margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
+                        <input id="profile-nickname-input" type="text" placeholder="输入昵称" />
+                        <button id="profile-save-btn" class="copy-btn secondary-btn" type="button">保存昵称</button>
+                    </div>
+                </div>
                 <div class="group-actions">
                     <button id="github-login-btn" class="copy-btn" type="button">使用 GitHub 登录</button>
                     <button id="logout-btn" class="copy-btn secondary-btn" type="button">退出登录</button>
                     <button id="export-prompts-btn" class="copy-btn secondary-btn" type="button">下载 prompt-data.json</button>
                 </div>
+                <div class="inline-add" style="margin-top: 12px;">
+                    <input id="admin-activation-code-input" type="password" placeholder="输入管理员激活码" />
+                    <button id="admin-activate-btn" class="copy-btn secondary-btn" type="button">激活管理员</button>
+                </div>
+                <div class="group-actions" style="margin-top: 10px;">
+                    <button id="import-prompts-btn" class="copy-btn secondary-btn" type="button">批量上传（从JSON）</button>
+                    <input id="import-prompts-file" type="file" accept="application/json,.json" hidden />
+                </div>
+                <div class="hint-text" style="margin-top: 8px;">说明：批量上传仅管理员可用，会覆盖当前账号的全部提示词数据。</div>
             </div>
         </div>
     </div>

@@ -36,10 +36,12 @@
 - `GET /api/auth/github/start`：跳转到 GitHub 授权页
 - `GET /api/auth/github/callback`：GitHub 回调并签发本地 access/refresh token
 - `POST /api/auth/refresh`：刷新 access token（并轮换 refresh token）
+- `GET /api/auth/me`：读取当前登录状态与管理员标记
+- `POST /api/auth/activate-admin`：使用激活码将当前账号升级为管理员
 - `GET /api/prompts`：读取完整提示词数据库（由 SQLite 重建 JSON 结构）
 - `GET /api/prompts/export`：下载 `prompt-data.json` 格式导出（浏览器附件下载）
 - `POST /api/prompts/mutate`：执行后端业务变更（新增/编辑/删除）
-- `PUT /api/prompts`：全量覆盖写入（用于导入/同步）
+- `PUT /api/prompts`：全量覆盖写入（用于导入/同步，仅管理员）
 - `GET /api/characters`：读取角色列表
 - `POST /api/characters`：创建角色
 - `PUT /api/characters/:id`：更新角色
@@ -69,8 +71,10 @@ GitHub OAuth 配置
 	- `GITHUB_CLIENT_ID`
 	- `GITHUB_CLIENT_SECRET`
 	- `ACCESS_TOKEN_SECRET`
+	- `ADMIN_ACTIVATION_CODE`（用于管理员激活）
 	- 可选：`GITHUB_CALLBACK_URL`
 5. 打开页面后，在“个人信息”页点击“使用 GitHub 登录”。
+6. 如需启用批量 JSON 导入，在“个人信息”页输入管理员激活码并激活管理员权限。
 
 安全提醒
 - 不要把 `GITHUB_CLIENT_SECRET`、`ACCESS_TOKEN_SECRET` 提交到仓库。

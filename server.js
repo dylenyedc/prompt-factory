@@ -45,9 +45,14 @@ const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || localSecrets.GI
 const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL
   || localSecrets.GITHUB_CALLBACK_URL
   || `http://localhost:${PORT}/api/auth/github/callback`;
+const ADMIN_ACTIVATION_CODE = process.env.ADMIN_ACTIVATION_CODE || localSecrets.ADMIN_ACTIVATION_CODE || '';
 
 if (!process.env.ACCESS_TOKEN_SECRET && !localSecrets.ACCESS_TOKEN_SECRET) {
   console.warn('[Security] ACCESS_TOKEN_SECRET 未配置：当前进程使用临时随机密钥，重启后 token 会失效。');
+}
+
+if (!ADMIN_ACTIVATION_CODE) {
+  console.warn('[Security] ADMIN_ACTIVATION_CODE 未配置：管理员激活功能将不可用。');
 }
 
 const db = openDatabase();
@@ -58,6 +63,24 @@ function requireString(value, message) {
     throw new Error(message);
   }
   return text;
+}
+
+function optionalTrimmedString(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value).trim();
+}
+
+function resolveDisplayName(user) {
+  if (!user || typeof user !== 'object') {
+    return '';
+  }
+  const displayName = optionalTrimmedString(user.display_name);
+  if (displayName) {
+    return displayName;
+  }
+  return optionalTrimmedString(user.username);
 }
 
 function nowMs() {
@@ -149,7 +172,7 @@ function rotateRefreshToken(refreshToken) {
     throw new Error('refresh token 已过期');
   }
 
-  const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(record.user_id);
+  const user = db.prepare('SELECT id, username, display_name, avatar_url FROM users WHERE id = ?').get(record.user_id);
   if (!user) {
     db.prepare('DELETE FROM refresh_tokens WHERE id = ?').run(record.id);
     throw new Error('用户不存在');
@@ -179,13 +202,18 @@ function authRequired(req, res, next) {
       return;
     }
 
-    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin FROM users WHERE id = ?').get(userId);
     if (!user) {
       res.status(401).json({ message: '用户不存在' });
       return;
     }
 
-    req.user = { id: user.id, username: user.username };
+    req.user = {
+      id: user.id,
+      username: user.username,
+      nickname: resolveDisplayName(user),
+      isAdmin: Number(user.is_admin) === 1
+    };
     next();
   } catch (_) {
     res.status(401).json({ message: '登录凭证已过期或无效' });
@@ -212,7 +240,7 @@ function authOptional(req, _res, next) {
       return;
     }
 
-    const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin FROM users WHERE id = ?').get(userId);
     if (!user) {
       req.user = null;
       req.authError = '用户不存在';
@@ -220,7 +248,12 @@ function authOptional(req, _res, next) {
       return;
     }
 
-    req.user = { id: user.id, username: user.username };
+    req.user = {
+      id: user.id,
+      username: user.username,
+      nickname: resolveDisplayName(user),
+      isAdmin: Number(user.is_admin) === 1
+    };
     req.authError = null;
   } catch (_) {
     req.user = null;
@@ -229,8 +262,36 @@ function authOptional(req, _res, next) {
   next();
 }
 
-function getPromptDataSnapshot(ownerUserId) {
-  return getPromptData(db, ownerUserId);
+function ensureAdmin(req, res, next) {
+  if (!req.user || !req.user.isAdmin) {
+    res.status(403).json({ message: '仅管理员可执行此操作' });
+    return;
+  }
+  next();
+}
+
+function canManageOwner(user, ownerUserId) {
+  if (!user || !user.id) {
+    return false;
+  }
+  if (user.isAdmin) {
+    return true;
+  }
+  return String(ownerUserId || '') === String(user.id || '');
+}
+
+function ensureCanManageOwner(user, ownerUserId) {
+  if (!canManageOwner(user, ownerUserId)) {
+    throw new Error('仅管理员可编辑或删除其他用户上传的数据');
+  }
+}
+
+function getPromptDataSnapshot(ownerUserId, options = {}) {
+  return getPromptData(db, ownerUserId, options);
+}
+
+function getMergedPromptDataSnapshot() {
+  return getPromptDataSnapshot('', { includeAllOwners: true, includeUploader: true });
 }
 
 function hasAnyPromptGroups(data) {
@@ -343,47 +404,57 @@ function findPromptGroupTable(section) {
   return '';
 }
 
-function mutateByAction(ownerUserId, action, payload = {}) {
-  const owner = requireString(ownerUserId, '缺少用户上下文');
+function mutateByAction(actorUser, action, payload = {}) {
+  if (!actorUser || !actorUser.id) {
+    throw new Error('缺少用户上下文');
+  }
+
+  const actor = {
+    id: String(actorUser.id),
+    isAdmin: !!actorUser.isAdmin
+  };
+
   const tx = db.transaction(() => {
     if (action === 'addCharGroup') {
       const title = requireString(payload.title, '请输入角色分组名称');
-      const existed = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND title = ?').get(owner, title);
+      const existed = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND title = ?').get(actor.id, title);
       if (existed) {
         throw new Error('该角色分组已存在');
       }
-      db.prepare('INSERT INTO characters(id, owner_user_id, title, tags_json) VALUES (?, ?, ?, ?)').run(newId(), owner, title, '[]');
+      db.prepare('INSERT INTO characters(id, owner_user_id, title, tags_json) VALUES (?, ?, ?, ?)').run(newId(), actor.id, title, '[]');
       return '已新增角色分组';
     }
 
     if (action === 'addOutfitGroup') {
       const title = requireString(payload.title, '请输入服装风格名称');
-      const existed = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND title = ?').get(owner, title);
+      const existed = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND title = ?').get(actor.id, title);
       if (existed) {
         throw new Error('该服装风格已存在');
       }
-      db.prepare('INSERT INTO outfits(id, owner_user_id, title) VALUES (?, ?, ?)').run(newId(), owner, title);
+      db.prepare('INSERT INTO outfits(id, owner_user_id, title) VALUES (?, ?, ?)').run(newId(), actor.id, title);
       return '已新增服装风格';
     }
 
     if (action === 'editCharGroupTags') {
       const groupId = requireString(payload.groupId, '角色分组不存在');
-      const existed = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
-      if (!existed) {
+      const group = db.prepare('SELECT owner_user_id FROM characters WHERE id = ?').get(groupId);
+      if (!group) {
         throw new Error('角色分组不存在');
       }
+      ensureCanManageOwner(actor, group.owner_user_id);
       const tags = Array.isArray(payload.tags) ? payload.tags : parseTags(payload.tagsRaw || '');
-      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), owner, groupId);
+      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), group.owner_user_id, groupId);
       return '角色标签已更新';
     }
 
     if (action === 'addCharTag') {
       const groupId = requireString(payload.groupId, '角色分组不存在');
       const tag = requireString(payload.tag, '标签不能为空');
-      const row = db.prepare('SELECT tags_json FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const row = db.prepare('SELECT owner_user_id, tags_json FROM characters WHERE id = ?').get(groupId);
       if (!row) {
         throw new Error('角色分组不存在');
       }
+      ensureCanManageOwner(actor, row.owner_user_id);
       let tags = [];
       try {
         tags = JSON.parse(row.tags_json || '[]');
@@ -395,7 +466,7 @@ function mutateByAction(ownerUserId, action, payload = {}) {
         throw new Error('该标签已存在');
       }
       tags.push(tag);
-      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), owner, groupId);
+      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), row.owner_user_id, groupId);
       return '标签已添加';
     }
 
@@ -403,10 +474,11 @@ function mutateByAction(ownerUserId, action, payload = {}) {
       const groupId = requireString(payload.groupId, '角色分组不存在');
       const oldTag = requireString(payload.oldTag, '标签不存在');
       const nextTag = requireString(payload.nextTag, '标签不能为空');
-      const row = db.prepare('SELECT tags_json FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const row = db.prepare('SELECT owner_user_id, tags_json FROM characters WHERE id = ?').get(groupId);
       if (!row) {
         throw new Error('角色分组不存在');
       }
+      ensureCanManageOwner(actor, row.owner_user_id);
       let tags = [];
       try {
         tags = JSON.parse(row.tags_json || '[]');
@@ -422,17 +494,18 @@ function mutateByAction(ownerUserId, action, payload = {}) {
         throw new Error('该标签已存在');
       }
       tags[index] = nextTag;
-      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), owner, groupId);
+      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(tags), row.owner_user_id, groupId);
       return '标签已更新';
     }
 
     if (action === 'deleteCharTag') {
       const groupId = requireString(payload.groupId, '角色分组不存在');
       const tag = requireString(payload.tag, '标签不存在');
-      const row = db.prepare('SELECT tags_json FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const row = db.prepare('SELECT owner_user_id, tags_json FROM characters WHERE id = ?').get(groupId);
       if (!row) {
         throw new Error('角色分组不存在');
       }
+      ensureCanManageOwner(actor, row.owner_user_id);
       let tags = [];
       try {
         tags = JSON.parse(row.tags_json || '[]');
@@ -444,33 +517,35 @@ function mutateByAction(ownerUserId, action, payload = {}) {
         throw new Error('标签不存在');
       }
       const next = tags.filter(item => item !== tag);
-      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(next), owner, groupId);
+      db.prepare('UPDATE characters SET tags_json = ? WHERE owner_user_id = ? AND id = ?').run(JSON.stringify(next), row.owner_user_id, groupId);
       return '标签已删除';
     }
 
     if (action === 'renameCharGroup') {
       const groupId = requireString(payload.groupId, '角色分组不存在');
       const title = requireString(payload.title, '角色名称不能为空');
-      const existed = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const existed = db.prepare('SELECT owner_user_id FROM characters WHERE id = ?').get(groupId);
       if (!existed) {
         throw new Error('角色分组不存在');
       }
-      const duplicated = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND title = ? AND id <> ?').get(owner, title, groupId);
+      ensureCanManageOwner(actor, existed.owner_user_id);
+      const duplicated = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND title = ? AND id <> ?').get(existed.owner_user_id, title, groupId);
       if (duplicated) {
         throw new Error('角色名称已存在');
       }
-      db.prepare('UPDATE characters SET title = ? WHERE owner_user_id = ? AND id = ?').run(title, owner, groupId);
+      db.prepare('UPDATE characters SET title = ? WHERE owner_user_id = ? AND id = ?').run(title, existed.owner_user_id, groupId);
       return '角色名称已更新';
     }
 
     if (action === 'deleteCharGroup') {
       const groupId = requireString(payload.groupId, '角色分组不存在');
-      const existed = db.prepare('SELECT 1 FROM characters WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const existed = db.prepare('SELECT owner_user_id FROM characters WHERE id = ?').get(groupId);
       if (!existed) {
         throw new Error('角色分组不存在');
       }
-      db.prepare("DELETE FROM prompts WHERE owner_user_id = ? AND section = 'chars' AND group_id = ?").run(owner, groupId);
-      db.prepare('DELETE FROM characters WHERE owner_user_id = ? AND id = ?').run(owner, groupId);
+      ensureCanManageOwner(actor, existed.owner_user_id);
+      db.prepare("DELETE FROM prompts WHERE owner_user_id = ? AND section = 'chars' AND group_id = ?").run(existed.owner_user_id, groupId);
+      db.prepare('DELETE FROM characters WHERE owner_user_id = ? AND id = ?').run(existed.owner_user_id, groupId);
       return '角色已删除';
     }
 
@@ -481,7 +556,12 @@ function mutateByAction(ownerUserId, action, payload = {}) {
       }
       const groupId = requireString(payload.groupId, '未找到所属分组');
       const itemId = requireString(payload.itemId, '条目不存在，无法删除');
-      const removed = db.prepare('DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?').run(owner, itemId, tabId, groupId);
+      const existed = db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId);
+      if (!existed) {
+        throw new Error('条目不存在，无法删除');
+      }
+      ensureCanManageOwner(actor, existed.owner_user_id);
+      const removed = db.prepare('DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?').run(existed.owner_user_id, itemId, tabId, groupId);
       if (!removed.changes) {
         throw new Error('条目不存在，无法删除');
       }
@@ -504,8 +584,14 @@ function mutateByAction(ownerUserId, action, payload = {}) {
         throw new Error('分组类型无效');
       }
 
+      const existed = db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId);
+      if (!existed) {
+        throw new Error('条目不存在，可能已被删除');
+      }
+      ensureCanManageOwner(actor, existed.owner_user_id);
+
       const updated = db.prepare('UPDATE prompts SET name = ?, prompt = ? WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?')
-        .run(name, prompt, owner, itemId, tabId, groupId);
+        .run(name, prompt, existed.owner_user_id, itemId, tabId, groupId);
       if (!updated.changes) {
         throw new Error('条目不存在，可能已被删除');
       }
@@ -529,39 +615,42 @@ function mutateByAction(ownerUserId, action, payload = {}) {
       }
 
       const groupTable = findPromptGroupTable(tabId);
-      const groupExists = db.prepare(`SELECT 1 FROM ${groupTable} WHERE owner_user_id = ? AND id = ?`).get(owner, groupId);
+      const groupExists = db.prepare(`SELECT owner_user_id FROM ${groupTable} WHERE id = ?`).get(groupId);
       if (!groupExists) {
         throw new Error(tabId === 'outfit' ? '未找到所属风格或分类' : '未找到分组');
       }
+      ensureCanManageOwner(actor, groupExists.owner_user_id);
 
       db.prepare('INSERT INTO prompts(id, owner_user_id, section, group_id, category_key, name, prompt) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(newId(), owner, tabId, groupId, categoryKey, name, prompt);
+        .run(newId(), groupExists.owner_user_id, tabId, groupId, categoryKey, name, prompt);
       return '已新增提示词条目';
     }
 
     if (action === 'renameOutfitGroup') {
       const groupId = requireString(payload.groupId, '服装风格不存在');
       const title = requireString(payload.title, '风格名称不能为空');
-      const existed = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const existed = db.prepare('SELECT owner_user_id FROM outfits WHERE id = ?').get(groupId);
       if (!existed) {
         throw new Error('服装风格不存在');
       }
-      const duplicated = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND title = ? AND id <> ?').get(owner, title, groupId);
+      ensureCanManageOwner(actor, existed.owner_user_id);
+      const duplicated = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND title = ? AND id <> ?').get(existed.owner_user_id, title, groupId);
       if (duplicated) {
         throw new Error('风格名称已存在');
       }
-      db.prepare('UPDATE outfits SET title = ? WHERE owner_user_id = ? AND id = ?').run(title, owner, groupId);
+      db.prepare('UPDATE outfits SET title = ? WHERE owner_user_id = ? AND id = ?').run(title, existed.owner_user_id, groupId);
       return '风格名称已更新';
     }
 
     if (action === 'deleteOutfitGroup') {
       const groupId = requireString(payload.groupId, '服装风格不存在');
-      const existed = db.prepare('SELECT 1 FROM outfits WHERE owner_user_id = ? AND id = ?').get(owner, groupId);
+      const existed = db.prepare('SELECT owner_user_id FROM outfits WHERE id = ?').get(groupId);
       if (!existed) {
         throw new Error('服装风格不存在');
       }
-      db.prepare("DELETE FROM prompts WHERE owner_user_id = ? AND section = 'outfit' AND group_id = ?").run(owner, groupId);
-      db.prepare('DELETE FROM outfits WHERE owner_user_id = ? AND id = ?').run(owner, groupId);
+      ensureCanManageOwner(actor, existed.owner_user_id);
+      db.prepare("DELETE FROM prompts WHERE owner_user_id = ? AND section = 'outfit' AND group_id = ?").run(existed.owner_user_id, groupId);
+      db.prepare('DELETE FROM outfits WHERE owner_user_id = ? AND id = ?').run(existed.owner_user_id, groupId);
       return '服装风格已删除';
     }
 
@@ -572,8 +661,14 @@ function mutateByAction(ownerUserId, action, payload = {}) {
       if (!OUTFIT_CATEGORY_KEYS.includes(categoryKey)) {
         throw new Error('服装分类无效');
       }
+      const existed = db.prepare("SELECT owner_user_id FROM prompts WHERE id = ? AND section = 'outfit' AND group_id = ? AND category_key = ?")
+        .get(itemId, groupId, categoryKey);
+      if (!existed) {
+        throw new Error('条目不存在，无法删除');
+      }
+      ensureCanManageOwner(actor, existed.owner_user_id);
       const removed = db.prepare("DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = 'outfit' AND group_id = ? AND category_key = ?")
-        .run(owner, itemId, groupId, categoryKey);
+        .run(existed.owner_user_id, itemId, groupId, categoryKey);
       if (!removed.changes) {
         throw new Error('条目不存在，无法删除');
       }
@@ -677,19 +772,19 @@ async function fetchGithubUser(accessToken) {
 
   return {
     providerUserId: String(user.id),
-    username: String(user.login),
-    avatarUrl: String(user.avatar_url || '')
+    username: String(user.login)
   };
 }
 
 function upsertGithubUser(profile) {
-  const existing = db.prepare('SELECT id, username FROM users WHERE provider = ? AND provider_user_id = ?')
+  const existing = db.prepare('SELECT id, username, display_name FROM users WHERE provider = ? AND provider_user_id = ?')
     .get('github', profile.providerUserId);
 
   if (existing) {
-    db.prepare('UPDATE users SET username = ?, avatar_url = ? WHERE id = ?')
-      .run(profile.username, profile.avatarUrl, existing.id);
-    return { id: existing.id, username: profile.username };
+    db.prepare('UPDATE users SET username = ? WHERE id = ?')
+      .run(profile.username, existing.id);
+    const nickname = optionalTrimmedString(existing.display_name) || profile.username;
+    return { id: existing.id, username: profile.username, nickname };
   }
 
   const hasSameUsername = db.prepare('SELECT 1 FROM users WHERE username = ?').get(profile.username);
@@ -697,14 +792,14 @@ function upsertGithubUser(profile) {
   const userId = newId();
   const userCount = db.prepare('SELECT COUNT(*) AS total FROM users').get();
 
-  db.prepare('INSERT INTO users(id, username, password_hash, provider, provider_user_id, avatar_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(userId, safeUsername, '', 'github', profile.providerUserId, profile.avatarUrl, nowMs());
+  db.prepare('INSERT INTO users(id, username, display_name, password_hash, provider, provider_user_id, avatar_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(userId, safeUsername, safeUsername, '', 'github', profile.providerUserId, '', nowMs());
 
   if (userCount && Number(userCount.total) === 0) {
     adoptOrphanData(db, userId);
   }
 
-  return { id: userId, username: safeUsername };
+  return { id: userId, username: safeUsername, nickname: safeUsername };
 }
 
 const app = express();
@@ -770,6 +865,79 @@ app.post('/api/auth/refresh', (req, res) => {
   }
 });
 
+app.get('/api/auth/me', authOptional, (req, res) => {
+  if (!req.user && req.authError) {
+    res.status(401).json({ message: req.authError });
+    return;
+  }
+
+  if (!req.user) {
+    res.json({ authenticated: false, username: '', nickname: '', isAdmin: false });
+    return;
+  }
+
+  res.json({
+    authenticated: true,
+    userId: req.user.id,
+    username: req.user.username,
+    nickname: req.user.nickname || req.user.username,
+    isAdmin: !!req.user.isAdmin
+  });
+});
+
+app.put('/api/auth/profile', authRequired, (req, res) => {
+  try {
+    const nicknameRaw = req.body && Object.prototype.hasOwnProperty.call(req.body, 'nickname')
+      ? optionalTrimmedString(req.body.nickname)
+      : req.user.nickname;
+
+    if (!nicknameRaw) {
+      res.status(400).json({ message: '昵称不能为空' });
+      return;
+    }
+
+    db.prepare('UPDATE users SET display_name = ? WHERE id = ?')
+      .run(nicknameRaw, req.user.id);
+
+    res.json({
+      message: '资料已更新',
+      profile: {
+        userId: req.user.id,
+        username: req.user.username,
+        nickname: nicknameRaw,
+        isAdmin: !!req.user.isAdmin
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message || '资料更新失败' });
+  }
+});
+
+app.post('/api/auth/activate-admin', authRequired, (req, res) => {
+  try {
+    if (!ADMIN_ACTIVATION_CODE) {
+      res.status(503).json({ message: '服务端未配置管理员激活码' });
+      return;
+    }
+
+    const code = requireString(req.body && req.body.code, '请输入激活码');
+    if (code !== ADMIN_ACTIVATION_CODE) {
+      res.status(400).json({ message: '激活码无效' });
+      return;
+    }
+
+    const updated = db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(req.user.id);
+    if (!updated.changes) {
+      res.status(404).json({ message: '用户不存在' });
+      return;
+    }
+
+    res.json({ message: '管理员权限已激活', isAdmin: true });
+  } catch (error) {
+    res.status(400).json({ message: error.message || '激活失败' });
+  }
+});
+
 app.get('/api/prompts', authOptional, (req, res) => {
   try {
     if (!req.user && req.authError) {
@@ -780,13 +948,11 @@ app.get('/api/prompts', authOptional, (req, res) => {
     res.set('Cache-Control', 'no-store');
     const isReadOnly = !req.user;
     res.set('X-Read-Only', isReadOnly ? '1' : '0');
-    if (isReadOnly) {
-      res.json(getPublicPromptDataSnapshot());
-      return;
-    }
-
-    ensureUserPromptDataInitialized(req.user.id);
-    res.json(getPromptDataSnapshot(req.user.id));
+    res.set('X-Is-Admin', req.user && req.user.isAdmin ? '1' : '0');
+    res.set('X-User-Id', req.user ? req.user.id : '');
+    res.set('X-User-Name', req.user ? req.user.username : '');
+    res.set('X-User-Nickname', req.user ? (req.user.nickname || req.user.username) : '');
+    res.json(getMergedPromptDataSnapshot());
   } catch (error) {
     res.status(500).json({ message: '读取数据失败', detail: error.message });
   }
@@ -800,15 +966,14 @@ app.get('/api/prompts/export', authOptional, (req, res) => {
     }
 
     const isReadOnly = !req.user;
-    if (!isReadOnly) {
-      ensureUserPromptDataInitialized(req.user.id);
-    }
-    const data = isReadOnly
-      ? getPublicPromptDataSnapshot()
-      : getPromptDataSnapshot(req.user.id);
+    const data = getMergedPromptDataSnapshot();
 
     res.set('Cache-Control', 'no-store');
     res.set('X-Read-Only', isReadOnly ? '1' : '0');
+    res.set('X-Is-Admin', req.user && req.user.isAdmin ? '1' : '0');
+    res.set('X-User-Id', req.user ? req.user.id : '');
+    res.set('X-User-Name', req.user ? req.user.username : '');
+    res.set('X-User-Nickname', req.user ? (req.user.nickname || req.user.username) : '');
     res.set('Content-Type', 'application/json; charset=utf-8');
     res.set('Content-Disposition', 'attachment; filename="prompt-data.json"');
     res.send(JSON.stringify(data, null, 2));
@@ -817,7 +982,7 @@ app.get('/api/prompts/export', authOptional, (req, res) => {
   }
 });
 
-app.put('/api/prompts', authRequired, (req, res) => {
+app.put('/api/prompts', authRequired, ensureAdmin, (req, res) => {
   try {
     const parsed = req.body;
     if (!parsed || typeof parsed !== 'object') {
@@ -827,7 +992,7 @@ app.put('/api/prompts', authRequired, (req, res) => {
 
     const normalized = normalizePromptData(parsed);
     replaceAllData(db, normalized, req.user.id);
-    res.json({ message: '保存成功', data: getPromptDataSnapshot(req.user.id) });
+    res.json({ message: '保存成功', data: getMergedPromptDataSnapshot() });
   } catch (error) {
     res.status(400).json({ message: '无法解析 JSON', detail: error.message });
   }
@@ -842,8 +1007,8 @@ app.post('/api/prompts/mutate', authRequired, (req, res) => {
       return;
     }
 
-    const message = mutateByAction(req.user.id, action, payload);
-    res.json({ message: message || '操作成功', data: getPromptDataSnapshot(req.user.id) });
+    const message = mutateByAction(req.user, action, payload);
+    res.json({ message: message || '操作成功', data: getMergedPromptDataSnapshot() });
   } catch (error) {
     res.status(400).json({ message: error.message || '操作失败' });
   }

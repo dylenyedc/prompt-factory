@@ -90,6 +90,10 @@ let activeCharTagMode = 'or';
 let activeCharKeyword = '';
 let activeOutfitCategory = '__all__';
 let isReadOnlyMode = false;
+let isAdminUser = false;
+let currentUserId = '';
+let currentUsername = '';
+let currentNickname = '';
 let toastTimeout;
 
 const charGroupTitleInput = document.getElementById('char-group-title-input');
