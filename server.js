@@ -87,6 +87,32 @@ function normalizeOutfitSafety(value) {
   return text === 'NSFW' ? 'NSFW' : 'SFW';
 }
 
+function normalizeCartItems(input) {
+  const list = Array.isArray(input) ? input : [];
+  return list.map((item, index) => {
+    const sourceTab = optionalTrimmedString(item && item.sourceTab);
+    const label = optionalTrimmedString(item && item.label);
+    const prompt = optionalTrimmedString(item && item.prompt);
+    return {
+      id: optionalTrimmedString(item && item.id) || newId(),
+      sourceTab: ['chars', 'actions', 'env', 'outfit'].includes(sourceTab) ? sourceTab : 'chars',
+      sourceGroupId: optionalTrimmedString(item && item.sourceGroupId),
+      sourceItemId: optionalTrimmedString(item && item.sourceItemId),
+      label: label || `未命名条目 ${index + 1}`,
+      prompt
+    };
+  }).filter(item => item.prompt).slice(0, 500);
+}
+
+function parseUserCart(cartJson) {
+  try {
+    const parsed = JSON.parse(String(cartJson || '[]'));
+    return normalizeCartItems(parsed);
+  } catch (_) {
+    return [];
+  }
+}
+
 function resolveDisplayName(user) {
   if (!user || typeof user !== 'object') {
     return '';
@@ -217,7 +243,7 @@ function authRequired(req, res, next) {
       return;
     }
 
-    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin, cart_json FROM users WHERE id = ?').get(userId);
     if (!user) {
       res.status(401).json({ message: '用户不存在' });
       return;
@@ -227,7 +253,8 @@ function authRequired(req, res, next) {
       id: user.id,
       username: user.username,
       nickname: resolveDisplayName(user),
-      isAdmin: Number(user.is_admin) === 1
+      isAdmin: Number(user.is_admin) === 1,
+      cartItems: parseUserCart(user.cart_json)
     };
     next();
   } catch (_) {
@@ -255,7 +282,7 @@ function authOptional(req, _res, next) {
       return;
     }
 
-    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin FROM users WHERE id = ?').get(userId);
+    const user = db.prepare('SELECT id, username, display_name, avatar_url, is_admin, cart_json FROM users WHERE id = ?').get(userId);
     if (!user) {
       req.user = null;
       req.authError = '用户不存在';
@@ -267,7 +294,8 @@ function authOptional(req, _res, next) {
       id: user.id,
       username: user.username,
       nickname: resolveDisplayName(user),
-      isAdmin: Number(user.is_admin) === 1
+      isAdmin: Number(user.is_admin) === 1,
+      cartItems: parseUserCart(user.cart_json)
     };
     req.authError = null;
   } catch (_) {
@@ -404,6 +432,26 @@ function findPromptGroupTable(section) {
     return 'outfits';
   }
   return '';
+}
+
+function ensureSectionGroupId(ownerUserId, section) {
+  const owner = String(ownerUserId || '').trim();
+  const tab = String(section || '').trim();
+  if (!owner || !['actions', 'env'].includes(tab)) {
+    throw new Error('分组类型无效');
+  }
+
+  const existed = db.prepare('SELECT id FROM prompt_groups WHERE owner_user_id = ? AND section = ? ORDER BY rowid ASC LIMIT 1')
+    .get(owner, tab);
+  if (existed && existed.id) {
+    return existed.id;
+  }
+
+  const groupId = newId();
+  const title = tab === 'actions' ? '动作标签' : '环境质量标签';
+  db.prepare('INSERT INTO prompt_groups(id, owner_user_id, section, title) VALUES (?, ?, ?, ?)')
+    .run(groupId, owner, tab, title);
+  return groupId;
 }
 
 function mutateByAction(actorUser, action, payload = {}) {
@@ -579,14 +627,18 @@ function mutateByAction(actorUser, action, payload = {}) {
       if (!['actions', 'env'].includes(tabId)) {
         throw new Error('分组类型无效');
       }
-      const groupId = requireString(payload.groupId, '未找到所属分组');
+      const groupId = optionalTrimmedString(payload.groupId);
       const itemId = requireString(payload.itemId, '条目不存在，无法删除');
-      const existed = db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId);
+      const existed = groupId
+        ? db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId)
+        : db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ?').get(itemId, tabId);
       if (!existed) {
         throw new Error('条目不存在，无法删除');
       }
       ensureCanManageOwner(actor, existed.owner_user_id);
-      const removed = db.prepare('DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?').run(existed.owner_user_id, itemId, tabId, groupId);
+      const removed = groupId
+        ? db.prepare('DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?').run(existed.owner_user_id, itemId, tabId, groupId)
+        : db.prepare('DELETE FROM prompts WHERE owner_user_id = ? AND id = ? AND section = ?').run(existed.owner_user_id, itemId, tabId);
       if (!removed.changes) {
         throw new Error('条目不存在，无法删除');
       }
@@ -595,22 +647,28 @@ function mutateByAction(actorUser, action, payload = {}) {
 
     if (action === 'saveItem') {
       const tabId = requireString(payload.tabId, '分组类型无效');
-      const groupId = requireString(payload.groupId, '未找到所属分组');
+      const groupId = optionalTrimmedString(payload.groupId);
       const itemId = requireString(payload.itemId, '条目不存在，可能已被删除');
       const name = requireString(payload.name, '请填写完整信息');
       const prompt = requireString(payload.prompt, '请填写完整信息');
+      const categoryKey = optionalTrimmedString(payload.categoryKey);
       if (!['actions', 'env'].includes(tabId)) {
         throw new Error('分组类型无效');
       }
 
-      const existed = db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId);
+      const existed = groupId
+        ? db.prepare('SELECT owner_user_id FROM prompts WHERE id = ? AND section = ? AND group_id = ?').get(itemId, tabId, groupId)
+        : db.prepare('SELECT owner_user_id, group_id FROM prompts WHERE id = ? AND section = ?').get(itemId, tabId);
       if (!existed) {
         throw new Error('条目不存在，可能已被删除');
       }
       ensureCanManageOwner(actor, existed.owner_user_id);
 
-      const updated = db.prepare('UPDATE prompts SET name = ?, prompt = ? WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?')
-        .run(name, prompt, existed.owner_user_id, itemId, tabId, groupId);
+      const updated = groupId
+        ? db.prepare('UPDATE prompts SET name = ?, prompt = ?, category_key = ? WHERE owner_user_id = ? AND id = ? AND section = ? AND group_id = ?')
+          .run(name, prompt, categoryKey, existed.owner_user_id, itemId, tabId, groupId)
+        : db.prepare('UPDATE prompts SET name = ?, prompt = ?, category_key = ? WHERE owner_user_id = ? AND id = ? AND section = ?')
+          .run(name, prompt, categoryKey, existed.owner_user_id, itemId, tabId);
       if (!updated.changes) {
         throw new Error('条目不存在，可能已被删除');
       }
@@ -619,13 +677,15 @@ function mutateByAction(actorUser, action, payload = {}) {
 
     if (action === 'addItem') {
       const tabId = requireString(payload.tabId, '分组类型无效');
-      const groupId = requireString(payload.groupId, '未找到分组');
+      const groupIdRaw = optionalTrimmedString(payload.groupId);
       const name = requireString(payload.name, '请填写完整信息');
       const prompt = requireString(payload.prompt, '请填写完整信息');
+      const categoryKey = optionalTrimmedString(payload.categoryKey);
       if (!['actions', 'env'].includes(tabId)) {
         throw new Error('分组类型无效');
       }
 
+      const groupId = groupIdRaw || ensureSectionGroupId(actor.id, tabId);
       const groupTable = findPromptGroupTable(tabId);
       const groupExists = db.prepare(`SELECT owner_user_id FROM ${groupTable} WHERE id = ?`).get(groupId);
       if (!groupExists) {
@@ -634,7 +694,7 @@ function mutateByAction(actorUser, action, payload = {}) {
       ensureCanManageOwner(actor, groupExists.owner_user_id);
 
       db.prepare('INSERT INTO prompts(id, owner_user_id, section, group_id, category_key, name, prompt) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(newId(), groupExists.owner_user_id, tabId, groupId, '', name, prompt);
+        .run(newId(), groupExists.owner_user_id, tabId, groupId, categoryKey, name, prompt);
       return '已新增提示词条目';
     }
 
@@ -910,7 +970,7 @@ app.get('/api/auth/me', authOptional, (req, res) => {
   }
 
   if (!req.user) {
-    res.json({ authenticated: false, username: '', nickname: '', isAdmin: false });
+    res.json({ authenticated: false, username: '', nickname: '', isAdmin: false, cartItems: [] });
     return;
   }
 
@@ -919,8 +979,24 @@ app.get('/api/auth/me', authOptional, (req, res) => {
     userId: req.user.id,
     username: req.user.username,
     nickname: req.user.nickname || req.user.username,
-    isAdmin: !!req.user.isAdmin
+    isAdmin: !!req.user.isAdmin,
+    cartItems: Array.isArray(req.user.cartItems) ? req.user.cartItems : []
   });
+});
+
+app.put('/api/auth/cart', authRequired, (req, res) => {
+  try {
+    const items = normalizeCartItems(req.body && req.body.items);
+    db.prepare('UPDATE users SET cart_json = ? WHERE id = ?')
+      .run(JSON.stringify(items), req.user.id);
+
+    res.json({
+      message: '购物车已保存',
+      cartItems: items
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message || '购物车保存失败' });
+  }
 });
 
 app.put('/api/auth/profile', authRequired, (req, res) => {

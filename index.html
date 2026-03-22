@@ -13,6 +13,7 @@
     <aside id="left-sidebar" class="left-sidebar" aria-label="主导航">
         <div class="sidebar-title">导航</div>
         <button class="sidebar-nav-item active" data-page="prompts" type="button">提示词管理</button>
+        <button class="sidebar-nav-item" data-page="alchemy" type="button">炼丹台</button>
         <button class="sidebar-nav-item" data-page="community" type="button">社区（开发中）</button>
         <button class="sidebar-nav-item" data-page="profile" type="button">个人信息（开发中）</button>
     </aside>
@@ -58,14 +59,41 @@
 
     <div id="tab-actions" class="container">
         <div class="card">
-            <div class="hint-text">提示：动作提示词请在对应分组卡片中直接新增或编辑。</div>
+            <div class="editor-title">新增动作条目</div>
+            <div class="inline-add">
+                <input id="action-item-title-input" type="text" placeholder="条目名称（例如：回眸一笑）" />
+                <input id="action-item-tags-input" type="text" placeholder="标签（可选，逗号分隔，例如：动态,站姿,中景）" />
+                <textarea id="action-item-prompt-input" placeholder="提示词内容"></textarea>
+                <button id="action-item-add-btn" class="copy-btn" type="button">新增条目</button>
+            </div>
+            <div class="hint-text">提示：动作已改为单级菜单，使用标签管理内容。</div>
+        </div>
+        <div class="card">
+            <div class="editor-title">标签筛选</div>
+            <div id="actions-tag-filters" class="tag-filter-wrap"></div>
+            <div class="hint-text" style="margin-top: 8px;">提示：可切换与/或模式，点击条目标签可快速编辑。</div>
         </div>
         <div id="list-actions"></div>
     </div>
 
     <div id="tab-env" class="container">
         <div class="card">
-            <div class="hint-text">提示：环境提示词请在对应分组卡片中直接新增或编辑。</div>
+            <div class="editor-title">新增环境/质量条目</div>
+            <div class="inline-add">
+                <input id="env-item-title-input" type="text" placeholder="条目名称（例如：通用高画质）" />
+                <select id="env-item-kind-input">
+                    <option value="环境">分类：环境</option>
+                    <option value="画质">分类：画质</option>
+                </select>
+                <textarea id="env-item-prompt-input" placeholder="提示词内容"></textarea>
+                <button id="env-item-add-btn" class="copy-btn" type="button">新增条目</button>
+            </div>
+            <div class="hint-text">提示：环境与质量已改为单级菜单，分类为必填二选一（环境/画质）。</div>
+        </div>
+        <div class="card">
+            <div class="editor-title">标签筛选</div>
+            <div id="env-tag-filters" class="tag-filter-wrap"></div>
+            <div class="hint-text" style="margin-top: 8px;">提示：可切换与/或模式，点击条目标签可快速编辑。</div>
         </div>
         <div id="list-env"></div>
     </div>
@@ -161,6 +189,46 @@
         </div>
     </div>
 
+    <div id="app-page-alchemy" class="app-page">
+        <header>
+            <h1>炼丹台</h1>
+            <div class="header-desc">左侧购物车提示词，中间编辑，右侧参数设置（预留 ComfyUI 对接）</div>
+        </header>
+        <div class="container active">
+            <div class="alchemy-layout">
+                <section class="card alchemy-panel">
+                    <div class="editor-title">购物车提示词</div>
+                    <div id="alchemy-cart-list" class="alchemy-cart-list"></div>
+                </section>
+                <section class="card alchemy-panel">
+                    <div class="editor-title">提示词编辑器</div>
+                    <textarea id="alchemy-editor" class="alchemy-editor" placeholder="在这里编辑最终提示词，左侧可快速插入购物车条目。"></textarea>
+                </section>
+                <section class="card alchemy-panel">
+                    <div class="editor-title">参数设置</div>
+                    <div class="alchemy-params-grid">
+                        <label class="alchemy-param-item">采样器
+                            <input id="alchemy-param-sampler" type="text" placeholder="例如：Euler a" />
+                        </label>
+                        <label class="alchemy-param-item">步数
+                            <input id="alchemy-param-steps" type="number" min="1" placeholder="例如：28" />
+                        </label>
+                        <label class="alchemy-param-item">CFG
+                            <input id="alchemy-param-cfg" type="number" step="0.1" min="0" placeholder="例如：7" />
+                        </label>
+                        <label class="alchemy-param-item">尺寸
+                            <input id="alchemy-param-size" type="text" placeholder="例如：1024x1024" />
+                        </label>
+                        <label class="alchemy-param-item">Seed
+                            <input id="alchemy-param-seed" type="number" placeholder="-1 表示随机" />
+                        </label>
+                    </div>
+                    <div class="hint-text" style="margin-top: 8px;">当前为参数占位区，后续可直接对接 ComfyUI 工作流。</div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <div id="app-page-profile" class="app-page">
         <header>
             <h1>个人信息</h1>
@@ -193,6 +261,19 @@
                 <div class="hint-text" style="margin-top: 8px;">说明：批量上传仅管理员可用，会覆盖当前账号的全部提示词数据。</div>
             </div>
         </div>
+    </div>
+
+    <button id="prompt-cart-fab" class="prompt-cart-fab" type="button" aria-label="打开提示词购物车">
+        🛒
+        <span id="prompt-cart-count" class="prompt-cart-count">0</span>
+    </button>
+
+    <div id="prompt-cart-panel" class="prompt-cart-panel">
+        <div class="prompt-cart-header">
+            <div class="editor-title" style="margin-bottom: 0;">提示词购物车</div>
+            <button id="prompt-cart-close" class="copy-btn secondary-btn" type="button">关闭</button>
+        </div>
+        <div id="prompt-cart-list" class="prompt-cart-list"></div>
     </div>
 
     <div id="toast">已复制到剪贴板</div>

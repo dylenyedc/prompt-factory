@@ -126,6 +126,23 @@ function authLogout() {
     currentNickname = '';
 }
 
+function normalizeCartItemsForClient(items) {
+    const list = Array.isArray(items) ? items : [];
+    return list.map(function (item) {
+        const sourceTab = String(item && item.sourceTab || '').trim();
+        return {
+            id: String(item && item.id || '').trim() || newId(),
+            sourceTab: TAB_KEYS.indexOf(sourceTab) > -1 ? sourceTab : 'chars',
+            sourceGroupId: String(item && item.sourceGroupId || '').trim(),
+            sourceItemId: String(item && item.sourceItemId || '').trim(),
+            label: String(item && item.label || '').trim() || '未命名条目',
+            prompt: String(item && item.prompt || '').trim()
+        };
+    }).filter(function (item) {
+        return !!item.prompt;
+    });
+}
+
 async function loadPromptData() {
     try {
         const response = await apiFetch('/api/prompts', {
@@ -181,7 +198,8 @@ async function loadMyProfile() {
         currentUserId = '';
         currentUsername = '';
         currentNickname = '';
-        return { ok: true, authenticated: false };
+        cartItems = [];
+        return { ok: true, authenticated: false, cartItems: [] };
     }
 
     try {
@@ -200,18 +218,73 @@ async function loadMyProfile() {
                 currentUserId = '';
                 currentUsername = '';
                 currentNickname = '';
+                cartItems = [];
                 setReadOnlyMode(true);
             }
-            return { ok: false, authenticated: false };
+            return { ok: false, authenticated: false, cartItems: [] };
         }
 
         currentUserId = result.userId || currentUserId;
         currentUsername = result.username || currentUsername;
         currentNickname = result.nickname || currentUsername;
         isAdminUser = !!result.isAdmin;
-        return { ok: true, authenticated: true };
+        cartItems = normalizeCartItemsForClient(result.cartItems);
+        return { ok: true, authenticated: true, cartItems: cartItems };
     } catch (_) {
-        return { ok: false, authenticated: false };
+        return { ok: false, authenticated: false, cartItems: [] };
+    }
+}
+
+async function updateMyCart(items) {
+    if (isReadOnlyMode || !hasAuthSession()) {
+        return { ok: false, message: '未登录', cartItems: normalizeCartItemsForClient(items) };
+    }
+
+    try {
+        const response = await apiFetch('/api/auth/cart', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ items: normalizeCartItemsForClient(items) })
+        });
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (_) {
+            result = null;
+        }
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                clearAuthTokens();
+                isAdminUser = false;
+                currentUserId = '';
+                currentUsername = '';
+                currentNickname = '';
+                setReadOnlyMode(true);
+            }
+            return {
+                ok: false,
+                message: result && result.message ? result.message : '购物车保存失败',
+                cartItems: normalizeCartItemsForClient(items)
+            };
+        }
+
+        const nextItems = normalizeCartItemsForClient(result && result.cartItems);
+        cartItems = nextItems;
+        return {
+            ok: true,
+            message: result && result.message ? result.message : '购物车已保存',
+            cartItems: nextItems
+        };
+    } catch (_) {
+        return {
+            ok: false,
+            message: '请求失败',
+            cartItems: normalizeCartItemsForClient(items)
+        };
     }
 }
 
@@ -553,7 +626,7 @@ function normalizePromptData(data) {
         }
     });
 
-    ['chars', 'actions', 'env'].forEach(function (tabKey) {
+    ['chars'].forEach(function (tabKey) {
         normalized[tabKey] = normalized[tabKey].map(function (group) {
             const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名分组', items: [] };
             if (!Array.isArray(nextGroup.items)) {
@@ -562,6 +635,63 @@ function normalizePromptData(data) {
             return nextGroup;
         });
     });
+
+    function toFlatTaggedEntries(sectionList) {
+        const entries = [];
+        (Array.isArray(sectionList) ? sectionList : []).forEach(function (group) {
+            if (!group || typeof group !== 'object') {
+                return;
+            }
+
+            const isLegacyGroup = Array.isArray(group.items);
+            if (!isLegacyGroup) {
+                const title = String(group.title || group.name || '').trim();
+                const prompt = String(group.prompt || '').trim();
+                if (!title || !prompt) {
+                    return;
+                }
+                const tags = Array.isArray(group.tags)
+                    ? group.tags.filter(Boolean)
+                    : parseTags(group.categoryKey || group.category_key || '');
+                entries.push({
+                    id: group.id || newId(),
+                    title: title,
+                    tags: tags,
+                    prompt: prompt,
+                    groupId: String(group.groupId || group.group_id || '').trim(),
+                    ownerUserId: String(group.ownerUserId || '').trim(),
+                    uploader: group.uploader || '',
+                    uploaderAvatarUrl: group.uploaderAvatarUrl || ''
+                });
+                return;
+            }
+
+            (group.items || []).forEach(function (item) {
+                const title = String(item && item.name || '').trim();
+                const prompt = String(item && item.prompt || '').trim();
+                if (!title || !prompt) {
+                    return;
+                }
+
+                const tags = parseTags(item && (item.categoryKey || item.category_key) || '');
+
+                entries.push({
+                    id: item && item.id || newId(),
+                    title: title,
+                    tags: tags,
+                    prompt: prompt,
+                    groupId: String(group.id || '').trim(),
+                    ownerUserId: String(item && (item.ownerUserId || '') || group.ownerUserId || '').trim(),
+                    uploader: item && item.uploader ? item.uploader : (group.uploader || ''),
+                    uploaderAvatarUrl: item && item.uploaderAvatarUrl ? item.uploaderAvatarUrl : (group.uploaderAvatarUrl || '')
+                });
+            });
+        });
+        return entries;
+    }
+
+    normalized.actions = toFlatTaggedEntries(normalized.actions);
+    normalized.env = toFlatTaggedEntries(normalized.env);
 
     normalized.chars = normalized.chars.map(function (group) {
         const nextGroup = group && typeof group === 'object' ? deepClone(group) : { id: newId(), title: '未命名角色', items: [] };

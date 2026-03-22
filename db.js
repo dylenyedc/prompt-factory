@@ -177,6 +177,7 @@ function openDatabase() {
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
       display_name TEXT NOT NULL DEFAULT '',
+      cart_json TEXT NOT NULL DEFAULT '[]',
       password_hash TEXT NOT NULL,
       provider TEXT NOT NULL DEFAULT 'local',
       provider_user_id TEXT NOT NULL DEFAULT '',
@@ -239,6 +240,7 @@ function openDatabase() {
   ensureColumn(db, 'users', 'provider', "provider TEXT NOT NULL DEFAULT 'local'");
   ensureColumn(db, 'users', 'provider_user_id', "provider_user_id TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'users', 'display_name', "display_name TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'users', 'cart_json', "cart_json TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'users', 'avatar_url', "avatar_url TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'users', 'is_admin', 'is_admin INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'characters', 'description', "description TEXT NOT NULL DEFAULT ''");
@@ -532,7 +534,8 @@ function getPromptData(db, ownerUserId, options = {}) {
       id: row.id,
       ownerUserId: row.owner_user_id || '',
       name: row.name,
-      prompt: row.prompt
+      prompt: row.prompt,
+      categoryKey: String(row.category_key || '').trim()
     };
     if (includeUploader) {
       item.uploader = resolveUploaderName(item.ownerUserId, row.uploader);

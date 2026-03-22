@@ -4,12 +4,14 @@ async function init() {
     bindImportEvents();
     promptData = await loadPromptData();
     await loadMyProfile();
+    initPromptCartState();
     renderAllTabs();
     bindListEvents();
     bindGroupEvents();
     bindCharSearchEvents();
     bindTagFilterEvents();
     bindCharSettingsModalEvents();
+    bindCartEvents();
     initSidebarNavigation();
     updateReadOnlyUI();
 
@@ -283,6 +285,7 @@ function initSidebarNavigation() {
     const navItems = document.querySelectorAll('.sidebar-nav-item');
     const pages = {
         prompts: document.getElementById('app-page-prompts'),
+        alchemy: document.getElementById('app-page-alchemy'),
         community: document.getElementById('app-page-community'),
         profile: document.getElementById('app-page-profile')
     };

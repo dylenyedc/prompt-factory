@@ -580,6 +580,212 @@ h1 { font-size: 1.2rem; color: var(--primary-color); }
     width: 100%;
 }
 
+.prompt-cart-fab {
+    position: fixed;
+    right: 14px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    border: none;
+    background: var(--primary-color);
+    color: #FFFFFF;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+    z-index: 300;
+}
+
+.prompt-cart-count {
+    position: absolute;
+    right: -2px;
+    top: -4px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #FEE2E2;
+    color: #991B1B;
+    font-size: 0.72rem;
+    line-height: 20px;
+    text-align: center;
+    font-weight: 700;
+    padding: 0 5px;
+}
+
+.prompt-cart-panel {
+    position: fixed;
+    right: 12px;
+    bottom: calc(148px + env(safe-area-inset-bottom));
+    width: min(92vw, 420px);
+    max-height: 58vh;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+    padding: 10px;
+    z-index: 300;
+    display: none;
+}
+
+.prompt-cart-panel.active {
+    display: block;
+}
+
+.alchemy-layout {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.4fr) minmax(240px, 1fr);
+    gap: 12px;
+}
+
+.alchemy-panel {
+    margin-bottom: 0;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+}
+
+.alchemy-cart-list {
+    display: grid;
+    gap: 8px;
+    overflow: auto;
+    max-height: 68vh;
+}
+
+.alchemy-cart-item {
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    background: #F8FAFC;
+    padding: 8px;
+}
+
+.alchemy-cart-item-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.alchemy-cart-item-title {
+    font-size: 0.84rem;
+    color: var(--text-main);
+    font-weight: 600;
+    flex: 1;
+}
+
+.alchemy-cart-item-prompt {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: #374151;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.alchemy-editor {
+    width: 100%;
+    flex: 1;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    padding: 10px;
+    resize: vertical;
+    min-height: 420px;
+    font-size: 0.92rem;
+    color: var(--text-main);
+    background: #FFF;
+}
+
+.alchemy-params-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.alchemy-param-item {
+    display: grid;
+    gap: 6px;
+    font-size: 0.84rem;
+    color: #4B5563;
+}
+
+.alchemy-param-item input {
+    width: 100%;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    background: #FFF;
+}
+
+@media (max-width: 1200px) {
+    .alchemy-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .alchemy-panel {
+        min-height: 0;
+    }
+
+    .alchemy-editor {
+        min-height: 320px;
+    }
+}
+
+.prompt-cart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.prompt-cart-list {
+    max-height: calc(58vh - 60px);
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+}
+
+.cart-item {
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    background: #F8FAFC;
+    padding: 8px;
+}
+
+.cart-item.dragging {
+    opacity: 0.6;
+}
+
+.cart-item-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cart-item-title {
+    font-size: 0.86rem;
+    color: var(--text-main);
+    font-weight: 600;
+    flex: 1;
+}
+
+.cart-item-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.cart-item-actions .copy-btn {
+    padding: 4px 8px;
+    font-size: 0.78rem;
+}
+
+.cart-item-prompt {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: #374151;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* 底部导航栏 */
 nav { 
     position: fixed; bottom: 0; width: 100%; background: var(--card-bg); 
